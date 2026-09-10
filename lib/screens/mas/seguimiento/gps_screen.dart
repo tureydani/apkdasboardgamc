@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 
+import '../../../app/theme/index.dart';
 import '../../../services/dispatch_service.dart';
 
 /// GET /api/dashboard/units/positions — última posición GPS conocida de
-/// cada unidad activa.
+/// cada unidad activa. Usa flutter_map + OpenStreetMap (sin API key), el
+/// mismo motor que arconde-gamc.
 class GpsScreen extends StatefulWidget {
   const GpsScreen({super.key});
 
@@ -52,16 +55,36 @@ class _GpsScreenState extends State<GpsScreen> {
                   children: [
                     SizedBox(
                       height: 300,
-                      child: GoogleMap(
-                        initialCameraPosition: const CameraPosition(target: _cochabamba, zoom: 12),
-                        markers: _units
-                            .map((u) => Marker(
-                                  markerId: MarkerId('u${u['PK_unit']}'),
-                                  position: LatLng(u['latitude'], u['longitude']),
-                                  infoWindow: InfoWindow(title: u['unitCode'], snippet: u['unitName']),
-                                  icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
-                                ))
-                            .toSet(),
+                      child: FlutterMap(
+                        options: const MapOptions(initialCenter: _cochabamba, initialZoom: 12, minZoom: 5, maxZoom: 19),
+                        children: [
+                          TileLayer(
+                            urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                            userAgentPackageName: 'bo.gob.cochabamba.gamc.sosapk',
+                            maxZoom: 19,
+                          ),
+                          MarkerLayer(
+                            markers: _units
+                                .map((u) => Marker(
+                                      point: LatLng(u['latitude'], u['longitude']),
+                                      width: 36,
+                                      height: 36,
+                                      child: Container(
+                                        padding: const EdgeInsets.all(5),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.secondary,
+                                          shape: BoxShape.circle,
+                                          border: Border.all(color: AppColors.surfacePrimary, width: 2),
+                                          boxShadow: [
+                                            BoxShadow(color: AppColors.secondary.withValues(alpha: 0.4), blurRadius: 8, spreadRadius: 2),
+                                          ],
+                                        ),
+                                        child: const Icon(Icons.local_shipping, size: 16, color: AppColors.textOnPrimary),
+                                      ),
+                                    ))
+                                .toList(),
+                          ),
+                        ],
                       ),
                     ),
                     Expanded(

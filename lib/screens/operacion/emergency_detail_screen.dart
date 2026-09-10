@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../app/theme/index.dart';
 import '../../config/crud_configs.dart';
 import '../../core/api_client.dart';
 import '../../services/emergency_service.dart';
@@ -80,7 +81,7 @@ class _EmergencyDetailScreenState extends State<EmergencyDetailScreen> {
       return Scaffold(appBar: AppBar(title: const Text('Error')), body: Center(child: Text(_error ?? 'No encontrada')));
     }
     final e = _data!;
-    final color = priorityColors[e['priority']] ?? Colors.grey;
+    final color = priorityColors[e['priority']] ?? AppColors.textTertiary;
 
     return DefaultTabController(
       length: 6,
@@ -157,7 +158,7 @@ class _InfoTab extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            SizedBox(width: 130, child: Text(k, style: const TextStyle(color: Colors.grey))),
+            SizedBox(width: 130, child: Text(k, style: const TextStyle(color: AppColors.textTertiary))),
             Expanded(child: Text(v?.toString() ?? '-')),
           ],
         ),
@@ -238,13 +239,13 @@ class _RoomTabState extends State<_RoomTab> {
                   margin: const EdgeInsets.symmetric(vertical: 4),
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   decoration: BoxDecoration(
-                    color: isSystem ? Colors.grey.shade200 : Colors.indigo.shade50,
+                    color: isSystem ? AppColors.surfaceTertiary : AppColors.accentContainer,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('${m['senderName'] ?? m['senderRole']}', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.indigo)),
+                      Text('${m['senderName'] ?? m['senderRole']}', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.accent)),
                       Text(m['message'] ?? ''),
                     ],
                   ),

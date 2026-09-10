@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import 'app/theme/index.dart';
 import 'providers/session_provider.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/shell/main_shell.dart';
@@ -19,10 +20,8 @@ class SosApp extends StatelessWidget {
       child: MaterialApp(
         title: 'SOS-24 GAMC',
         debugShowCheckedModeBanner: false,
-        theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(seedColor: Colors.red),
-          useMaterial3: true,
-          navigationBarTheme: const NavigationBarThemeData(
+        theme: AppTheme.lightTheme.copyWith(
+          navigationBarTheme: AppTheme.lightTheme.navigationBarTheme.copyWith(
             labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
           ),
         ),

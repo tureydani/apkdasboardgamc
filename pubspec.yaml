@@ -47,8 +47,20 @@ dependencies:
   # Manejo de estado
   provider: ^6.1.5
 
-  # Mapas (para replicar el mapa interactivo de emergencias)
-  google_maps_flutter: ^2.13.1
+  # Mapas (mismo motor que arconde-gamc: OpenStreetMap vía flutter_map, sin
+  # necesidad de una API key de Google Maps)
+  flutter_map: ^7.0.2
+  latlong2: ^0.9.1
+
+  # Ubicación del usuario ("Mi ubicación" en el mapa), mismo paquete y
+  # flujo de permisos que arconde-gamc
+  geolocator: ^12.0.0
+
+  # Animación de entrada del botón "Reportar", igual que arconde-gamc
+  flutter_animate: ^4.5.0
+
+  # Tipografía (mismo sistema visual que arconde-gamc)
+  google_fonts: ^6.2.1
 
 dev_dependencies:
   flutter_test:

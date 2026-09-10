@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../app/theme/index.dart';
 import '../../providers/session_provider.dart';
 import '../shell/main_shell.dart';
 
@@ -45,7 +46,7 @@ class _LoginScreenState extends State<LoginScreen> {
     final session = context.watch<SessionProvider>();
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0F172A),
+      backgroundColor: AppColors.background,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -56,34 +57,51 @@ class _LoginScreenState extends State<LoginScreen> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Icon(Icons.emergency_share, color: Colors.redAccent, size: 64),
-                  const SizedBox(height: 12),
-                  const Text(
+                  Container(
+                    width: 88,
+                    height: 88,
+                    decoration: const BoxDecoration(
+                      gradient: AppColors.primaryGradient,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.emergency_share, color: AppColors.textOnPrimary, size: 40),
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
                     'SOS-24 GAMC',
                     textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold),
+                    style: AppTextStyles.headlineLarge,
                   ),
-                  const Text(
+                  const SizedBox(height: 4),
+                  Text(
                     'Panel institucional',
                     textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.white70, fontSize: 14),
+                    style: AppTextStyles.bodyMediumSecondary,
                   ),
                   const SizedBox(height: 32),
                   TextFormField(
                     controller: _emailCtrl,
                     keyboardType: TextInputType.emailAddress,
-                    style: const TextStyle(color: Colors.white),
-                    decoration: _inputDecoration('Correo institucional', Icons.mail_outline),
+                    style: AppTextStyles.bodyMedium,
+                    decoration: const InputDecoration(
+                      labelText: 'Correo institucional',
+                      prefixIcon: Icon(Icons.mail_outline),
+                    ),
                     validator: (v) => (v == null || v.isEmpty) ? 'Ingresa tu correo' : null,
                   ),
                   const SizedBox(height: 16),
                   TextFormField(
                     controller: _passwordCtrl,
                     obscureText: _obscure,
-                    style: const TextStyle(color: Colors.white),
-                    decoration: _inputDecoration('Contraseña', Icons.lock_outline).copyWith(
+                    style: AppTextStyles.bodyMedium,
+                    decoration: InputDecoration(
+                      labelText: 'Contraseña',
+                      prefixIcon: const Icon(Icons.lock_outline),
                       suffixIcon: IconButton(
-                        icon: Icon(_obscure ? Icons.visibility_off : Icons.visibility, color: Colors.white54),
+                        icon: Icon(
+                          _obscure ? Icons.visibility_off : Icons.visibility,
+                          color: AppColors.textTertiary,
+                        ),
                         onPressed: () => setState(() => _obscure = !_obscure),
                       ),
                     ),
@@ -94,7 +112,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     const SizedBox(height: 12),
                     Text(
                       session.errorMessage!,
-                      style: const TextStyle(color: Colors.redAccent, fontSize: 13),
+                      style: AppTextStyles.bodySmall.copyWith(color: AppColors.error),
                       textAlign: TextAlign.center,
                     ),
                   ],
@@ -102,17 +120,18 @@ class _LoginScreenState extends State<LoginScreen> {
                   ElevatedButton(
                     onPressed: session.loading ? null : _submit,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.redAccent,
                       padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
                     child: session.loading
                         ? const SizedBox(
                             height: 20,
                             width: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: AppColors.textOnPrimary,
+                            ),
                           )
-                        : const Text('Ingresar', style: TextStyle(fontSize: 16, color: Colors.white)),
+                        : const Text('Ingresar'),
                   ),
                 ],
               ),
@@ -120,17 +139,6 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         ),
       ),
-    );
-  }
-
-  InputDecoration _inputDecoration(String label, IconData icon) {
-    return InputDecoration(
-      labelText: label,
-      labelStyle: const TextStyle(color: Colors.white54),
-      prefixIcon: Icon(icon, color: Colors.white54),
-      filled: true,
-      fillColor: Colors.white.withValues(alpha: 0.06),
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
     );
   }
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../app/theme/index.dart';
 import '../../../core/api_client.dart';
 import '../../../providers/session_provider.dart';
 import '../../../services/catalog_services.dart';
@@ -86,7 +87,7 @@ class _UsersScreenState extends State<UsersScreen> {
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancelar')),
           FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            style: FilledButton.styleFrom(backgroundColor: AppColors.error),
             onPressed: () => Navigator.pop(context, true),
             child: const Text('Dar de baja'),
           ),
@@ -145,13 +146,13 @@ class _UsersScreenState extends State<UsersScreen> {
                         ),
                         isThreeLine: true,
                         leading: CircleAvatar(
-                          backgroundColor: active ? Colors.green.shade100 : Colors.grey.shade300,
-                          child: Icon(Icons.person, color: active ? Colors.green.shade800 : Colors.grey.shade600),
+                          backgroundColor: active ? AppColors.resolvedGreenContainer : AppColors.surfaceTertiary,
+                          child: Icon(Icons.person, color: active ? AppColors.resolvedGreenDark : AppColors.textTertiary),
                         ),
                         onTap: () => _openForm(item: u),
                         trailing: active
                             ? IconButton(
-                                icon: const Icon(Icons.person_off_outlined, color: Colors.redAccent),
+                                icon: const Icon(Icons.person_off_outlined, color: AppColors.error),
                                 tooltip: 'Dar de baja',
                                 onPressed: () => _deactivate(u),
                               )
@@ -404,7 +405,7 @@ class _UserFormDialogState extends State<_UserFormDialog> {
                       ),
                       if (_error != null) ...[
                         const SizedBox(height: 8),
-                        Text(_error!, style: const TextStyle(color: Colors.red)),
+                        Text(_error!, style: const TextStyle(color: AppColors.error)),
                       ],
                     ],
                   ),

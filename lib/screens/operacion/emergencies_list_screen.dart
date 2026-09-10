@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
 
+import '../../app/theme/index.dart';
 import '../../services/emergency_service.dart';
 import 'emergency_detail_screen.dart';
 import 'emergency_form_screen.dart';
 
 const priorityColors = {
-  'CRITICA': Color(0xFFDC2626),
-  'ALTA': Color(0xFFEA580C),
-  'MEDIA': Color(0xFFF59E0B),
-  'BAJA': Color(0xFF94A3B8),
+  'CRITICA': AppColors.urgentRedDark,
+  'ALTA': AppColors.urgentRed,
+  'MEDIA': AppColors.moderateOrange,
+  'BAJA': AppColors.textTertiary,
 };
 
 /// Lista de emergencias (`tbemergencies`, isMainEmergency=true), reutilizada
@@ -98,7 +99,7 @@ class _EmergenciesListScreenState extends State<EmergenciesListScreen> {
                         separatorBuilder: (_, __) => const Divider(height: 1),
                         itemBuilder: (context, i) {
                           final e = _items[i];
-                          final color = priorityColors[e['priority']] ?? Colors.grey;
+                          final color = priorityColors[e['priority']] ?? AppColors.textTertiary;
                           return ListTile(
                             leading: CircleAvatar(backgroundColor: color.withValues(alpha: 0.15), child: Icon(Icons.emergency, color: color)),
                             title: Text(e['emergencyCode'] ?? ''),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../app/theme/index.dart';
 import '../../core/api_client.dart';
 import 'crud_config.dart';
 import 'crud_form_dialog.dart';
@@ -70,7 +71,7 @@ class _GenericCrudScreenState extends State<GenericCrudScreen> {
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancelar')),
           FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            style: FilledButton.styleFrom(backgroundColor: AppColors.error),
             onPressed: () => Navigator.pop(context, true),
             child: const Text('Eliminar'),
           ),
@@ -138,7 +139,7 @@ class _GenericCrudScreenState extends State<GenericCrudScreen> {
                             onTap: cfg.canEdit ? () => _openForm(item: item) : null,
                             trailing: cfg.canDelete
                                 ? IconButton(
-                                    icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+                                    icon: const Icon(Icons.delete_outline, color: AppColors.error),
                                     onPressed: () => _confirmDelete(item),
                                   )
                                 : null,
@@ -150,7 +151,7 @@ class _GenericCrudScreenState extends State<GenericCrudScreen> {
           ? FloatingActionButton(onPressed: () => _openForm(), child: const Icon(Icons.add))
           : null,
       persistentFooterButtons: _total > 0
-          ? [Text('$_total registro(s)', style: const TextStyle(fontSize: 12, color: Colors.grey))]
+          ? [Text('$_total registro(s)', style: const TextStyle(fontSize: 12, color: AppColors.textTertiary))]
           : null,
     );
   }

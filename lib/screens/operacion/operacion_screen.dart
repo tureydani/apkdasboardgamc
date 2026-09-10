@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../app/theme/index.dart';
 import 'dispatch_list_screen.dart';
 import 'emergencies_list_screen.dart';
 
@@ -13,14 +14,14 @@ class OperacionScreen extends StatelessWidget {
         'Emergencias',
         'Todas las emergencias activas',
         Icons.emergency,
-        Colors.red,
+        AppColors.urgentRed,
         () => const EmergenciesListScreen(title: 'Emergencias', allowCreate: true),
       ),
       _MenuItem(
         'Incidentes',
         'Recién reportadas, en análisis/clasificación',
         Icons.report_gmailerrorred,
-        Colors.orange,
+        AppColors.moderateOrange,
         () => const EmergenciesListScreen(
           title: 'Incidentes',
           statusFilter: ['REPORTADA', 'EN_ANALISIS', 'CLASIFICADA'],
@@ -30,7 +31,7 @@ class OperacionScreen extends StatelessWidget {
         'Despacho',
         'Aceptar, salir, llegar y completar asignaciones',
         Icons.local_shipping_outlined,
-        Colors.indigo,
+        AppColors.accent,
         () => const DispatchListScreen(
           title: 'Despacho',
           statusFilter: ['SOLICITADA', 'ACEPTADA', 'EN_CAMINO', 'EN_SITIO'],
@@ -40,7 +41,7 @@ class OperacionScreen extends StatelessWidget {
         'Asignación de unidades',
         'Emergencias clasificadas listas para asignar',
         Icons.assignment_ind_outlined,
-        Colors.teal,
+        AppColors.secondary,
         () => const EmergenciesListScreen(
           title: 'Asignación de unidades',
           statusFilter: ['CLASIFICADA', 'ASIGNADA'],
@@ -50,7 +51,7 @@ class OperacionScreen extends StatelessWidget {
         'Historial',
         'Resueltas, falsas alarmas y canceladas',
         Icons.history,
-        Colors.grey,
+        AppColors.textTertiary,
         () => const EmergenciesListScreen(
           title: 'Historial de emergencias',
           statusFilter: ['RESUELTA', 'FALSA_ALARMA', 'CANCELADA'],

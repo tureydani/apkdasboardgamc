@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../app/theme/index.dart';
 import '../../services/notification_service.dart';
 import '../../widgets/app_scaffold.dart';
 import '../operacion/emergency_detail_screen.dart';
@@ -89,7 +90,7 @@ class _AlertasScreenState extends State<AlertasScreen> {
                           final n = _items[i];
                           final read = n['isRead'] == true;
                           return ListTile(
-                            leading: Icon(_typeIcons[n['notificationType']] ?? Icons.notifications, color: read ? Colors.grey : Colors.redAccent),
+                            leading: Icon(_typeIcons[n['notificationType']] ?? Icons.notifications, color: read ? AppColors.textTertiary : AppColors.urgentRed),
                             title: Text(n['title'] ?? '', style: TextStyle(fontWeight: read ? FontWeight.normal : FontWeight.bold)),
                             subtitle: Text('${n['message'] ?? ''}\n${n['createdAt'] ?? ''}'),
                             isThreeLine: true,

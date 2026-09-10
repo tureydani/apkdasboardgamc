@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../app/theme/index.dart';
 import 'crud_config.dart';
 import 'field_spec.dart';
 
@@ -153,7 +154,7 @@ class _CrudFormDialogState extends State<CrudFormDialog> {
                         const SizedBox(height: 12),
                       ],
                       if (_error != null)
-                        Text(_error!, style: const TextStyle(color: Colors.red)),
+                        Text(_error!, style: const TextStyle(color: AppColors.error)),
                     ],
                   ),
                 ),
