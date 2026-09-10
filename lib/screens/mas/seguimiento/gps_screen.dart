@@ -96,7 +96,7 @@ class _GpsScreenState extends State<GpsScreen> {
                           return ListTile(
                             leading: const Icon(Icons.local_shipping_outlined),
                             title: Text('${u['unitCode']} · ${u['unitName']}'),
-                            subtitle: Text('${u['institution']?['name'] ?? ''} · ${u['status']}'),
+                            subtitle: Text('${u['institution'] ?? ''} · ${u['status']}'),
                             trailing: Text(u['lastSeenAt']?.toString().split('T').first ?? ''),
                           );
                         },

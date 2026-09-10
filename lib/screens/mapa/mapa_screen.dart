@@ -372,7 +372,7 @@ class _UnitsMapTabState extends State<_UnitsMapTab> with _LocateMeMixin {
             child: Icon(Icons.local_shipping, color: AppColors.secondaryDark),
           ),
           title: Text(u['unitCode'] ?? ''),
-          subtitle: Text('${u['institution']?['name'] ?? ''} · ${u['status'] ?? ''}'),
+          subtitle: Text('${u['institution'] ?? ''} · ${u['status'] ?? ''}'),
         ),
       ),
     );

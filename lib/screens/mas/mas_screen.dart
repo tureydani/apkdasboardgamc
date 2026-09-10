@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
 
+import 'package:provider/provider.dart';
+
+import '../../app/theme/index.dart';
 import '../../config/crud_configs.dart';
+import '../../providers/session_provider.dart';
 import '../../widgets/app_scaffold.dart';
 import '../../widgets/crud/generic_crud_screen.dart';
 import 'administracion/users_screen.dart';
 import 'catalogos/estados_screen.dart';
 import 'citizens_screen.dart';
+import 'perfil_screen.dart';
 import 'seguimiento/gps_screen.dart';
 import 'seguimiento/tracking_historial_screen.dart';
 
@@ -14,10 +19,25 @@ class MasScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final user = context.watch<SessionProvider>().user;
+
     return AppScaffold(
       title: 'Más',
       body: ListView(
         children: [
+          Card(
+            margin: const EdgeInsets.fromLTRB(12, 12, 12, 4),
+            child: ListTile(
+              leading: const CircleAvatar(
+                backgroundColor: AppColors.primaryContainer,
+                child: Icon(Icons.person, color: AppColors.primary),
+              ),
+              title: Text(user?.fullName ?? 'Mi perfil', style: const TextStyle(fontWeight: FontWeight.w600)),
+              subtitle: Text(user?.privilegeName ?? 'Ver información de la cuenta'),
+              trailing: const Icon(Icons.chevron_right, size: 18),
+              onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const PerfilScreen())),
+            ),
+          ),
           _Section(
             title: 'Instituciones',
             icon: Icons.apartment,

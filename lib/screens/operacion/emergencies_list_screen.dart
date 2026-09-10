@@ -19,12 +19,18 @@ class EmergenciesListScreen extends StatefulWidget {
   final String title;
   final List<String>? statusFilter;
   final bool allowCreate;
+  final bool activeOnly;
+  final String? priorityFilter;
+  final bool reportedTodayOnly;
 
   const EmergenciesListScreen({
     super.key,
     required this.title,
     this.statusFilter,
     this.allowCreate = false,
+    this.activeOnly = false,
+    this.priorityFilter,
+    this.reportedTodayOnly = false,
   });
 
   @override
@@ -52,9 +58,20 @@ class _EmergenciesListScreenState extends State<EmergenciesListScreen> {
     try {
       final result = await _service.list(
         status: widget.statusFilter,
+        priority: widget.priorityFilter,
+        active: widget.activeOnly ? true : null,
         search: _searchCtrl.text.trim().isEmpty ? null : _searchCtrl.text.trim(),
       );
-      setState(() => _items = result.items);
+      var items = result.items;
+      if (widget.reportedTodayOnly) {
+        final startOfDay = DateTime.now();
+        final today = DateTime(startOfDay.year, startOfDay.month, startOfDay.day);
+        items = items.where((e) {
+          final reportedAt = DateTime.tryParse('${e['reportedAt']}');
+          return reportedAt != null && !reportedAt.isBefore(today);
+        }).toList();
+      }
+      setState(() => _items = items);
     } catch (e) {
       setState(() => _error = e.toString());
     } finally {

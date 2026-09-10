@@ -3,6 +3,7 @@ import 'package:geolocator/geolocator.dart';
 
 import '../../app/theme/index.dart';
 import '../../core/api_client.dart';
+import '../../core/dispatch_status.dart';
 import '../../core/services/location_service.dart';
 import '../../core/tracking_config.dart';
 import '../../services/dispatch_service.dart';
@@ -165,41 +166,67 @@ class _DispatchListScreenState extends State<DispatchListScreen> {
     }
   }
 
+  static const _destructiveStyle = ButtonStyle(
+    foregroundColor: WidgetStatePropertyAll(AppColors.urgentRed),
+    side: WidgetStatePropertyAll(BorderSide(color: AppColors.urgentRed)),
+  );
+
+  Widget _buttonFor(DispatchAction action, Map<String, dynamic> item) {
+    final id = item['PK_assignment'] as int;
+    switch (action) {
+      case DispatchAction.accept:
+        return FilledButton.icon(
+          onPressed: _busy ? null : () => _act(() => _service.accept(id)),
+          icon: const Icon(Icons.check, size: 18),
+          label: const Text('Aceptar'),
+        );
+      case DispatchAction.reject:
+        return OutlinedButton.icon(
+          onPressed: _busy ? null : () => _cancel(id),
+          style: _destructiveStyle,
+          icon: const Icon(Icons.close, size: 18),
+          label: const Text('Rechazar'),
+        );
+      case DispatchAction.depart:
+        return FilledButton.icon(
+          onPressed: _busy ? null : () => _depart(id),
+          icon: const Icon(Icons.directions_run, size: 18),
+          label: const Text('Salir'),
+        );
+      case DispatchAction.cancel:
+        return OutlinedButton.icon(
+          onPressed: _busy ? null : () => _cancel(id),
+          style: _destructiveStyle,
+          icon: const Icon(Icons.close, size: 18),
+          label: const Text('Cancelar'),
+        );
+      case DispatchAction.arrive:
+        return FilledButton.icon(
+          onPressed: _busy ? null : () => _confirmArrival(item),
+          icon: const Icon(Icons.flag_outlined, size: 18),
+          label: const Text('Llegué'),
+        );
+      case DispatchAction.viewRoute:
+        return OutlinedButton.icon(
+          onPressed: () => Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => DispatchTrackingScreen(assignmentId: id)),
+          ),
+          icon: const Icon(Icons.map_outlined, size: 18),
+          label: const Text('Ver ruta'),
+        );
+      case DispatchAction.complete:
+        return FilledButton.icon(
+          onPressed: _busy ? null : () => _complete(id),
+          icon: const Icon(Icons.check_circle_outline, size: 18),
+          label: const Text('Completar'),
+        );
+    }
+  }
+
   List<Widget> _actionsFor(Map<String, dynamic> item) {
     if (!widget.showActions) return [];
-    final id = item['PK_assignment'] as int;
-    final status = item['status'];
-    switch (status) {
-      case 'SOLICITADA':
-        return [
-          TextButton(onPressed: _busy ? null : () => _act(() => _service.accept(id)), child: const Text('Aceptar')),
-          TextButton(
-            onPressed: _busy ? null : () => _cancel(id),
-            child: const Text('Rechazar/Cancelar'),
-          ),
-        ];
-      case 'ACEPTADA':
-        return [
-          TextButton(onPressed: _busy ? null : () => _depart(id), child: const Text('Salir')),
-          TextButton(onPressed: _busy ? null : () => _cancel(id), child: const Text('Cancelar')),
-        ];
-      case 'EN_CAMINO':
-        return [
-          TextButton(onPressed: _busy ? null : () => _confirmArrival(item), child: const Text('Llegué')),
-          TextButton(
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => DispatchTrackingScreen(assignmentId: id)),
-            ),
-            child: const Text('Ver ruta'),
-          ),
-        ];
-      case 'EN_SITIO':
-        return [
-          TextButton(onPressed: _busy ? null : () => _complete(id), child: const Text('Completar')),
-        ];
-      default:
-        return [];
-    }
+    final status = item['status'] as String;
+    return DispatchStatus.actionsFor(status).map((action) => _buttonFor(action, item)).toList();
   }
 
   @override
@@ -214,23 +241,71 @@ class _DispatchListScreenState extends State<DispatchListScreen> {
                 ? Center(child: Text(_error!))
                 : _items.isEmpty
                     ? ListView(children: const [SizedBox(height: 80), Center(child: Text('Sin asignaciones'))])
-                    : ListView.separated(
+                    : ListView.builder(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
                         itemCount: _items.length,
-                        separatorBuilder: (_, __) => const Divider(height: 1),
                         itemBuilder: (context, i) {
                           final a = _items[i];
-                          final color = _statusColors[a['status']] ?? AppColors.textTertiary;
+                          final status = a['status'];
+                          final color = _statusColors[status] ?? AppColors.textTertiary;
                           final emergency = a['tbemergencies'];
                           final unit = a['tbunits'];
-                          return ListTile(
-                            leading: CircleAvatar(backgroundColor: color.withValues(alpha: 0.15), child: Icon(Icons.local_shipping, color: color)),
-                            title: Text(emergency?['emergencyCode'] ?? 'Asignación #${a['PK_assignment']}'),
-                            subtitle: Text(
-                              '${a['tbinstitutions']?['acronym'] ?? a['tbinstitutions']?['name'] ?? ''}'
-                              '${unit != null ? ' · ${unit['unitCode']}' : ''}\n${_statusLabels[a['status']] ?? a['status']}',
+                          final institutionLabel = a['tbinstitutions']?['acronym'] ?? a['tbinstitutions']?['name'] ?? '';
+                          final actions = _actionsFor(a);
+
+                          return Card(
+                            margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            child: Padding(
+                              padding: const EdgeInsets.all(12),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      CircleAvatar(
+                                        backgroundColor: color.withValues(alpha: 0.15),
+                                        child: Icon(Icons.local_shipping, color: color),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              emergency?['emergencyCode'] ?? 'Asignación #${a['PK_assignment']}',
+                                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                                            ),
+                                            const SizedBox(height: 2),
+                                            Text(
+                                              '$institutionLabel${unit != null ? ' · ${unit['unitCode']}' : ''}',
+                                              style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Chip(
+                                        label: Text(
+                                          _statusLabels[status] ?? status ?? '',
+                                          style: const TextStyle(fontSize: 11, color: Colors.white),
+                                        ),
+                                        backgroundColor: color,
+                                        visualDensity: VisualDensity.compact,
+                                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                      ),
+                                    ],
+                                  ),
+                                  if (actions.isNotEmpty) ...[
+                                    const SizedBox(height: 12),
+                                    Wrap(spacing: 8, runSpacing: 8, children: actions),
+                                  ],
+                                ],
+                              ),
                             ),
-                            isThreeLine: true,
-                            trailing: Wrap(spacing: 4, children: _actionsFor(a)),
                           );
                         },
                       ),
