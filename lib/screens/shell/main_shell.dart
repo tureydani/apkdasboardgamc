@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../app/theme/index.dart';
+import '../../core/animations/motion.dart';
 import '../../providers/alerts_provider.dart';
+import '../../providers/route_view_provider.dart';
 import '../../providers/session_provider.dart';
 import '../alertas/alertas_screen.dart';
 import '../home/home_screen.dart';
@@ -21,8 +23,11 @@ class MainShell extends StatefulWidget {
 }
 
 class _MainShellState extends State<MainShell> {
+  static const _mapaTabIndex = 2;
+
   int _index = 0;
   final _alerts = AlertsProvider();
+  late final RouteViewProvider _routeView;
 
   final _pages = const [
     HomeScreen(),
@@ -37,12 +42,24 @@ class _MainShellState extends State<MainShell> {
     super.initState();
     final user = context.read<SessionProvider>().user;
     _alerts.start(trackAssignments: user?.role == 'INSTITUTION');
+    // Cualquier pantalla puede pedir "ver ruta" (RouteViewProvider.show);
+    // acá se reacciona saltando a la pestaña Mapa, que a su vez salta a su
+    // propia subpestaña "Mi ruta" escuchando el mismo provider.
+    _routeView = context.read<RouteViewProvider>();
+    _routeView.addListener(_onRouteRequested);
   }
 
   @override
   void dispose() {
+    _routeView.removeListener(_onRouteRequested);
     _alerts.dispose();
     super.dispose();
+  }
+
+  void _onRouteRequested() {
+    if (_routeView.assignmentId != null && _index != _mapaTabIndex) {
+      setState(() => _index = _mapaTabIndex);
+    }
   }
 
   void _selectTab(int i) {
@@ -81,8 +98,8 @@ class _MainShellState extends State<MainShell> {
             destinations: [
               const NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home), label: 'Inicio'),
               NavigationDestination(
-                icon: _badge(const Icon(Icons.emergency_outlined), hasPending ? _alerts.pendingAssignments : 0),
-                selectedIcon: _badge(const Icon(Icons.emergency), hasPending ? _alerts.pendingAssignments : 0),
+                icon: _dispatchIcon(const Icon(Icons.emergency_outlined), hasPending),
+                selectedIcon: _dispatchIcon(const Icon(Icons.emergency), hasPending),
                 label: 'Operación',
               ),
               const NavigationDestination(icon: Icon(Icons.map_outlined), selectedIcon: Icon(Icons.map), label: 'Mapa'),
@@ -107,6 +124,15 @@ class _MainShellState extends State<MainShell> {
       child: icon,
     );
   }
+
+  /// Ícono de "Operación" con la insignia de pendientes; si hay al menos
+  /// una asignación SOLICITADA, además late suavemente para que el usuario
+  /// note que ahí debe tocar (misma idea que la franja roja de arriba).
+  Widget _dispatchIcon(Widget icon, bool hasPending) {
+    final badged = _badge(icon, hasPending ? _alerts.pendingAssignments : 0);
+    if (!hasPending) return badged;
+    return badged.pulseGlow(minScale: 1.0, maxScale: 1.15, minOpacity: 0.6, maxOpacity: 1.0, duration: const Duration(milliseconds: 900));
+  }
 }
 
 /// Franja roja persistente, visible en cualquier pestaña, mientras haya al
@@ -130,7 +156,11 @@ class _PendingAssignmentBanner extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             child: Row(
               children: [
-                const Icon(Icons.warning_amber_rounded, color: Colors.white, size: 20),
+                // Sin cambio de escala (solo opacidad) para no distorsionar
+                // una franja de ancho completo — el parpadeo es la señal de
+                // "tocá acá", igual que en el ícono de Operación.
+                const Icon(Icons.warning_amber_rounded, color: Colors.white, size: 20)
+                    .pulseGlow(minScale: 1.0, maxScale: 1.0, minOpacity: 0.5, maxOpacity: 1.0, duration: const Duration(milliseconds: 900)),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(

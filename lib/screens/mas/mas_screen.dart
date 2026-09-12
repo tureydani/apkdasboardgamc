@@ -22,73 +22,74 @@ class MasScreen extends StatelessWidget {
     final user = context.watch<SessionProvider>().user;
 
     return AppScaffold(
-      title: 'Más',
-      body: ListView(
-        children: [
-          Card(
-            margin: const EdgeInsets.fromLTRB(12, 12, 12, 4),
-            child: ListTile(
-              leading: const CircleAvatar(
-                backgroundColor: AppColors.primaryContainer,
-                child: Icon(Icons.person, color: AppColors.primary),
+      body: SafeArea(
+        child: ListView(
+          children: [
+            Card(
+              margin: const EdgeInsets.fromLTRB(12, 12, 12, 4),
+              child: ListTile(
+                leading: const CircleAvatar(
+                  backgroundColor: AppColors.primaryContainer,
+                  child: Icon(Icons.person, color: AppColors.primary),
+                ),
+                title: Text(user?.fullName ?? 'Mi perfil', style: const TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: Text(user?.privilegeName ?? 'Ver información de la cuenta'),
+                trailing: const Icon(Icons.chevron_right, size: 18),
+                onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const PerfilScreen())),
               ),
-              title: Text(user?.fullName ?? 'Mi perfil', style: const TextStyle(fontWeight: FontWeight.w600)),
-              subtitle: Text(user?.privilegeName ?? 'Ver información de la cuenta'),
-              trailing: const Icon(Icons.chevron_right, size: 18),
-              onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const PerfilScreen())),
             ),
-          ),
-          _Section(
-            title: 'Instituciones',
-            icon: Icons.apartment,
-            items: [
-              _Item('Instituciones', () => GenericCrudScreen(config: CrudConfigs.institutions)),
-              _Item('Personal', () => const UsersScreen()),
-            ],
-          ),
-          _Section(
-            title: 'Unidades y recursos',
-            icon: Icons.local_shipping,
-            items: [
-              _Item('Unidades', () => GenericCrudScreen(config: CrudConfigs.units)),
-              _Item('Vehículos', () => GenericCrudScreen(config: CrudConfigs.units)),
-              _Item('Recursos', () => GenericCrudScreen(config: CrudConfigs.resourceTypes)),
-              _Item('Equipamiento', () => GenericCrudScreen(config: CrudConfigs.resourceTypes)),
-            ],
-          ),
-          _Section(
-            title: 'Seguimiento',
-            icon: Icons.gps_fixed,
-            items: [
-              _Item('GPS', () => const GpsScreen()),
-              _Item(
-                'Estado de unidades',
-                () => GenericCrudScreen(config: CrudConfigs.units),
-              ),
-              _Item('Historial', () => const TrackingHistorialScreen()),
-            ],
-          ),
-          _Section(
-            title: 'Administración',
-            icon: Icons.admin_panel_settings,
-            items: [
-              _Item('Usuarios', () => const UsersScreen()),
-              _Item('Roles', () => GenericCrudScreen(config: CrudConfigs.privileges)),
-              _Item('Permisos', () => GenericCrudScreen(config: CrudConfigs.privileges)),
-              _Item('Ciudadanos', () => const CitizensScreen()),
-            ],
-          ),
-          _Section(
-            title: 'Catálogos',
-            icon: Icons.category,
-            items: [
-              _Item('Tipos de emergencia', () => GenericCrudScreen(config: CrudConfigs.emergencyTypes)),
-              _Item('Estados', () => const EstadosScreen()),
-              _Item('Categorías (tipos de institución)', () => GenericCrudScreen(config: CrudConfigs.institutionTypes)),
-              _Item('Otros catálogos (subinstituciones)', () => GenericCrudScreen(config: CrudConfigs.subinstitutions)),
-            ],
-          ),
-        ],
+            _Section(
+              title: 'Instituciones',
+              icon: Icons.apartment,
+              items: [
+                _Item('Instituciones', () => GenericCrudScreen(config: CrudConfigs.institutions)),
+                _Item('Personal', () => const UsersScreen()),
+              ],
+            ),
+            _Section(
+              title: 'Unidades y recursos',
+              icon: Icons.local_shipping,
+              items: [
+                _Item('Unidades', () => GenericCrudScreen(config: CrudConfigs.units)),
+                _Item('Vehículos', () => GenericCrudScreen(config: CrudConfigs.units)),
+                _Item('Recursos', () => GenericCrudScreen(config: CrudConfigs.resourceTypes)),
+                _Item('Equipamiento', () => GenericCrudScreen(config: CrudConfigs.resourceTypes)),
+              ],
+            ),
+            _Section(
+              title: 'Seguimiento',
+              icon: Icons.gps_fixed,
+              items: [
+                _Item('GPS', () => const GpsScreen()),
+                _Item(
+                  'Estado de unidades',
+                  () => GenericCrudScreen(config: CrudConfigs.units),
+                ),
+                _Item('Historial', () => const TrackingHistorialScreen()),
+              ],
+            ),
+            _Section(
+              title: 'Administración',
+              icon: Icons.admin_panel_settings,
+              items: [
+                _Item('Usuarios', () => const UsersScreen()),
+                _Item('Roles', () => GenericCrudScreen(config: CrudConfigs.privileges)),
+                _Item('Permisos', () => GenericCrudScreen(config: CrudConfigs.privileges)),
+                _Item('Ciudadanos', () => const CitizensScreen()),
+              ],
+            ),
+            _Section(
+              title: 'Catálogos',
+              icon: Icons.category,
+              items: [
+                _Item('Tipos de emergencia', () => GenericCrudScreen(config: CrudConfigs.emergencyTypes)),
+                _Item('Estados', () => const EstadosScreen()),
+                _Item('Categorías (tipos de institución)', () => GenericCrudScreen(config: CrudConfigs.institutionTypes)),
+                _Item('Otros catálogos (subinstituciones)', () => GenericCrudScreen(config: CrudConfigs.subinstitutions)),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

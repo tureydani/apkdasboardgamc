@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'app/theme/index.dart';
+import 'providers/route_view_provider.dart';
 import 'providers/session_provider.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/shell/main_shell.dart';
@@ -15,8 +16,14 @@ class SosApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => SessionProvider(),
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => SessionProvider()),
+        // Por encima del Navigator para que tanto las pestañas de MainShell
+        // como las pantallas empujadas (p. ej. Despacho) puedan pedir "ver
+        // ruta" con el mismo provider.
+        ChangeNotifierProvider(create: (_) => RouteViewProvider()),
+      ],
       child: MaterialApp(
         title: 'SOS-24 GAMC',
         debugShowCheckedModeBanner: false,

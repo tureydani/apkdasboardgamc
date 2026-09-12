@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:geolocator/geolocator.dart';
 
+import '../core/services/gps_preference_service.dart';
 import '../core/services/location_service.dart';
 import '../core/tracking_config.dart';
 import 'dispatch_service.dart';
@@ -31,6 +32,12 @@ class UnitTrackingService {
   Future<void> start(int assignmentId) async {
     if (_assignmentId == assignmentId) return;
     await stop();
+
+    if (!await GpsPreferenceService.isSharingEnabled()) {
+      // El usuario apagó "Compartir mi ubicación" en Más > GPS: el despacho
+      // sigue su curso normal, simplemente no se envía tracking en vivo.
+      return;
+    }
 
     final permission = await LocationService.getCurrentPositionResult();
     if (permission.status != LocationResultStatus.success) {

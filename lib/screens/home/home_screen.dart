@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../app/theme/index.dart';
+import '../../providers/route_view_provider.dart';
 import '../../providers/session_provider.dart';
 import '../../services/dashboard_service.dart';
+import '../../services/dispatch_service.dart';
 import '../../widgets/app_scaffold.dart';
 import '../mas/seguimiento/gps_screen.dart';
 import '../operacion/dispatch_list_screen.dart';
@@ -23,12 +25,15 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final _service = DashboardService();
+  final _dispatchService = DispatchService();
   late Future<DashboardStats> _future;
+  Map<String, dynamic>? _activeRoute;
 
   @override
   void initState() {
     super.initState();
     _future = _service.fetchStats();
+    _loadActiveRoute();
   }
 
   Future<void> _reload() async {
@@ -36,6 +41,22 @@ class _HomeScreenState extends State<HomeScreen> {
       _future = _service.fetchStats();
     });
     await _future;
+    await _loadActiveRoute();
+  }
+
+  /// Asignación EN_CAMINO (si la hay) para mostrar el botón "Ver ruta" —
+  /// solo aplica a usuarios institucionales, el backend ya filtra por
+  /// institución/sesión igual que el resto de listados de despacho.
+  Future<void> _loadActiveRoute() async {
+    final user = context.read<SessionProvider>().user;
+    if (user?.role != 'INSTITUTION') return;
+    try {
+      final result = await _dispatchService.list(status: const ['EN_CAMINO']);
+      if (!mounted) return;
+      setState(() => _activeRoute = result.items.isNotEmpty ? result.items.first : null);
+    } catch (_) {
+      // Sin conexión: se conserva el último valor conocido.
+    }
   }
 
   void _open(Widget screen) {
@@ -47,10 +68,6 @@ class _HomeScreenState extends State<HomeScreen> {
     final user = context.watch<SessionProvider>().user;
 
     return AppScaffold(
-      title: 'Inicio',
-      actions: [
-        IconButton(icon: const Icon(Icons.refresh), tooltip: 'Actualizar', onPressed: _reload),
-      ],
       body: SafeArea(
         child: FutureBuilder<DashboardStats>(
           future: _future,
@@ -81,18 +98,50 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    user != null ? 'Hola, ${user.fullName}' : 'Hola',
-                    style: Theme.of(context).textTheme.titleLarge,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              user != null ? 'Hola, ${user.fullName}' : 'Hola',
+                              style: Theme.of(context).textTheme.titleLarge,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            Text(
+                              user?.privilegeName ?? '',
+                              style: AppTextStyles.bodyMediumSecondary,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.refresh),
+                        tooltip: 'Actualizar',
+                        onPressed: _reload,
+                        visualDensity: VisualDensity.compact,
+                      ),
+                    ],
                   ),
-                  Text(
-                    user?.privilegeName ?? '',
-                    style: AppTextStyles.bodyMediumSecondary,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
+                  if (_activeRoute != null) ...[
+                    const SizedBox(height: 10),
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton.icon(
+                        onPressed: () => context.read<RouteViewProvider>().show(_activeRoute!['PK_assignment'] as int),
+                        icon: const Icon(Icons.map_outlined),
+                        label: Text(
+                          'Ver ruta · ${_activeRoute!['tbemergencies']?['emergencyCode'] ?? 'Unidad en camino'}',
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 12),
                   Expanded(
                     child: Column(
@@ -195,25 +244,30 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-/// Cuadrícula 2x3 que reparte el alto disponible entre las filas sin dejar
-/// que el contenido se desborde ni active scroll: cada celda mide exactamente
-/// lo que le corresponde del espacio real de la pantalla.
+/// Cuadrícula que reparte el alto disponible entre las filas sin dejar que
+/// el contenido se desborde ni active scroll: cada celda mide exactamente
+/// lo que le corresponde del espacio real de la pantalla. El número de
+/// columnas se deriva del ancho disponible (2 en un teléfono, 3+ en una
+/// pantalla ancha/tablet) en vez de quedar fijo.
 class _KpiGrid extends StatelessWidget {
   final List<_KpiCard> cards;
-  static const _crossAxisCount = 2;
   static const _spacing = 12.0;
   // Alto mínimo que necesita una tarjeta para mostrar ícono + valor + etiqueta
   // de 2 líneas sin recortarse (con margen para texto de sistema ampliado).
   static const _minCellHeight = 96.0;
+  // Ancho mínimo cómodo por tarjeta antes de sumar una columna más.
+  static const _minCellWidth = 160.0;
 
   const _KpiGrid({required this.cards});
 
   @override
   Widget build(BuildContext context) {
-    final rows = (cards.length / _crossAxisCount).ceil();
     return LayoutBuilder(
       builder: (context, constraints) {
-        final cellWidth = (constraints.maxWidth - _spacing * (_crossAxisCount - 1)) / _crossAxisCount;
+        final maxColumns = ((constraints.maxWidth + _spacing) / (_minCellWidth + _spacing)).floor();
+        final crossAxisCount = maxColumns.clamp(2, cards.length);
+        final rows = (cards.length / crossAxisCount).ceil();
+        final cellWidth = (constraints.maxWidth - _spacing * (crossAxisCount - 1)) / crossAxisCount;
         final evenCellHeight = (constraints.maxHeight - _spacing * (rows - 1)) / rows;
         final cellHeight = evenCellHeight < _minCellHeight ? _minCellHeight : evenCellHeight;
 
@@ -225,13 +279,13 @@ class _KpiGrid extends StatelessWidget {
               child: SizedBox(
                 height: cellHeight,
                 child: Row(
-                  children: List.generate(_crossAxisCount, (col) {
-                    final index = row * _crossAxisCount + col;
+                  children: List.generate(crossAxisCount, (col) {
+                    final index = row * crossAxisCount + col;
                     final child = index < cards.length
                         ? SizedBox(width: cellWidth, child: cards[index])
                         : SizedBox(width: cellWidth);
                     return Padding(
-                      padding: EdgeInsets.only(right: col == _crossAxisCount - 1 ? 0 : _spacing),
+                      padding: EdgeInsets.only(right: col == crossAxisCount - 1 ? 0 : _spacing),
                       child: child,
                     );
                   }),
