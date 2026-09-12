@@ -19,6 +19,8 @@ class MapZoneSearchField extends StatefulWidget {
   final int? filteredCount;
   final ValueChanged<GeoSearchResult> onZoneSelected;
   final VoidCallback onZoneCleared;
+  final VoidCallback? onFilterPressed;
+  final bool filtersActive;
 
   const MapZoneSearchField({
     super.key,
@@ -26,6 +28,8 @@ class MapZoneSearchField extends StatefulWidget {
     required this.onZoneCleared,
     this.selectedZone,
     this.filteredCount,
+    this.onFilterPressed,
+    this.filtersActive = false,
   });
 
   @override
@@ -212,8 +216,11 @@ class _MapZoneSearchFieldState extends State<MapZoneSearchField> {
           hintText: 'Buscar sector o dirección',
           hintStyle: AppTextStyles.bodyMedium.copyWith(color: AppColors.textDisabled),
           prefixIcon: Icon(Icons.search, color: AppColors.textTertiary, size: AppSpacing.iconMd),
-          suffixIcon: _status == _SearchStatus.loading
-              ? const Padding(
+          suffixIcon: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (_status == _SearchStatus.loading)
+                const Padding(
                   padding: EdgeInsets.symmetric(horizontal: AppSpacing.sm),
                   child: SizedBox(
                     width: 16,
@@ -224,12 +231,23 @@ class _MapZoneSearchFieldState extends State<MapZoneSearchField> {
                     ),
                   ),
                 )
-              : _controller.text.isNotEmpty
-                  ? IconButton(
-                      icon: Icon(Icons.close, color: AppColors.textTertiary, size: AppSpacing.iconSm),
-                      onPressed: _clearQuery,
-                    )
-                  : null,
+              else if (_controller.text.isNotEmpty)
+                IconButton(
+                  icon: Icon(Icons.close, color: AppColors.textTertiary, size: AppSpacing.iconSm),
+                  onPressed: _clearQuery,
+                ),
+              if (widget.onFilterPressed != null)
+                IconButton(
+                  icon: Icon(
+                    widget.filtersActive ? Icons.filter_alt : Icons.filter_alt_outlined,
+                    color: widget.filtersActive ? AppColors.secondary : AppColors.textTertiary,
+                    size: AppSpacing.iconMd,
+                  ),
+                  tooltip: 'Filtros del mapa',
+                  onPressed: widget.onFilterPressed,
+                ),
+            ],
+          ),
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.md,

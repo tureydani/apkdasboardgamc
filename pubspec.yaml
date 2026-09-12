@@ -51,6 +51,9 @@ dependencies:
   # necesidad de una API key de Google Maps)
   flutter_map: ^7.0.2
   latlong2: ^0.9.1
+  # Agrupa marcadores cercanos (por distancia en pantalla, no solo lat/lng)
+  # para que no se vean círculos sólidos superpuestos al alejar el zoom.
+  flutter_map_marker_cluster: ^1.3.6
 
   # Ubicación del usuario ("Mi ubicación" en el mapa), mismo paquete y
   # flujo de permisos que arconde-gamc

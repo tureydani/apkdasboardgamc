@@ -153,7 +153,7 @@ class _PendingAssignmentBanner extends StatelessWidget {
         child: SafeArea(
           bottom: false,
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Row(
               children: [
                 // Sin cambio de escala (solo opacidad) para no distorsionar
@@ -161,12 +161,26 @@ class _PendingAssignmentBanner extends StatelessWidget {
                 // "tocá acá", igual que en el ícono de Operación.
                 const Icon(Icons.warning_amber_rounded, color: Colors.white, size: 20)
                     .pulseGlow(minScale: 1.0, maxScale: 1.0, minOpacity: 0.5, maxOpacity: 1.0, duration: const Duration(milliseconds: 900)),
-                const SizedBox(width: 8),
+                const SizedBox(width: 10),
+                // Dos niveles de jerarquía en vez de una sola línea larga:
+                // el texto principal (qué pasa) pesa más que la instrucción
+                // secundaria (qué hacer), igual que en el resto del rediseño.
                 Expanded(
-                  child: Text(
-                    '$label · Tocar para revisar',
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13),
-                    overflow: TextOverflow.ellipsis,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        label,
+                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      Text(
+                        'Tocar para revisar',
+                        style: TextStyle(color: Colors.white.withValues(alpha: 0.85), fontSize: 11.5),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
                   ),
                 ),
                 const Icon(Icons.chevron_right, color: Colors.white, size: 18),

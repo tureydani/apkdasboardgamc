@@ -16,6 +16,25 @@ import '../operacion/emergencies_list_screen.dart';
 /// coincide exactamente con el número mostrado.
 const _activeStatuses = ['REPORTADA', 'EN_ANALISIS', 'CLASIFICADA', 'ASIGNADA', 'EN_ATENCION'];
 
+// Paleta institucional de las tarjetas de estadísticas: fondo pastel bien
+// definido + un único color de acento (ícono y número) por tarjeta, para
+// que cada estado se reconozca de un vistazo sin saturar la pantalla de
+// color. Los estados que requieren acción (críticas, pendientes) usan los
+// acentos más fuertes; los informativos (reportadas, resueltas) los más
+// suaves.
+const _kpiActiveBg = Color(0xFFFFF4E5);
+const _kpiActiveAccent = Color(0xFFE67E22);
+const _kpiCriticalBg = Color(0xFFFDE8E8);
+const _kpiCriticalAccent = Color(0xFFD93025);
+const _kpiTodayBg = Color(0xFFE8F4FA);
+const _kpiTodayAccent = Color(0xFF1597D3);
+const _kpiResolvedBg = Color(0xFFE8F5EE);
+const _kpiResolvedAccent = Color(0xFF159A68);
+const _kpiPendingBg = Color(0xFFF0E9FA);
+const _kpiPendingAccent = Color(0xFF7040B5);
+const _kpiUnitsBg = Color(0xFFF5EAF1);
+const _kpiUnitsAccent = Color(0xFFB34D87);
+
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -107,13 +126,22 @@ class _HomeScreenState extends State<HomeScreen> {
                           children: [
                             Text(
                               user != null ? 'Hola, ${user.fullName}' : 'Hola',
-                              style: Theme.of(context).textTheme.titleLarge,
+                              // Sans-serif explícito (no AppTextStyles, que
+                              // usa una serif de acento): esta pantalla debe
+                              // leerse como un dashboard institucional, no
+                              // como una portada editorial.
+                              style: const TextStyle(
+                                fontSize: 31,
+                                fontWeight: FontWeight.w600,
+                                height: 1.15,
+                                color: AppColors.textPrimary,
+                              ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
                             Text(
                               user?.privilegeName ?? '',
-                              style: AppTextStyles.bodyMediumSecondary,
+                              style: const TextStyle(fontSize: 16, color: AppColors.textSecondary),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -134,15 +162,40 @@ class _HomeScreenState extends State<HomeScreen> {
                       width: double.infinity,
                       child: FilledButton.icon(
                         onPressed: () => context.read<RouteViewProvider>().show(_activeRoute!['PK_assignment'] as int),
-                        icon: const Icon(Icons.map_outlined),
-                        label: Text(
-                          'Ver ruta · ${_activeRoute!['tbemergencies']?['emergencyCode'] ?? 'Unidad en camino'}',
-                          overflow: TextOverflow.ellipsis,
+                        style: FilledButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+                          elevation: 2,
+                          shadowColor: AppColors.primary.withValues(alpha: 0.35),
+                          alignment: Alignment.centerLeft,
+                        ),
+                        icon: const Icon(Icons.map_outlined, size: 28),
+                        // Título accionable arriba, código SOS más chico y
+                        // secundario debajo: comunica "hay una emergencia
+                        // activa y puedo ir hacia ella" de un vistazo.
+                        label: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Text(
+                              'Ver ruta a la emergencia',
+                              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            Text(
+                              _activeRoute!['tbemergencies']?['emergencyCode'] ?? 'Unidad en camino',
+                              style: TextStyle(fontSize: 12, color: AppColors.textOnPrimary.withValues(alpha: 0.8), fontWeight: FontWeight.w400),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
                         ),
                       ),
                     ),
                   ],
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 10),
                   Expanded(
                     child: Column(
                       children: [
@@ -153,7 +206,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                 label: 'Emergencias activas',
                                 value: '${stats.activeEmergencies}',
                                 icon: Icons.warning_amber_rounded,
-                                color: AppColors.moderateOrange,
+                                background: _kpiActiveBg,
+                                accent: _kpiActiveAccent,
                                 onTap: () => _open(const EmergenciesListScreen(
                                   title: 'Emergencias activas',
                                   statusFilter: _activeStatuses,
@@ -161,10 +215,11 @@ class _HomeScreenState extends State<HomeScreen> {
                                 )),
                               ),
                               _KpiCard(
-                                label: 'Críticas',
+                                label: 'Emergencias críticas',
                                 value: '${stats.criticalActive}',
-                                icon: Icons.priority_high,
-                                color: AppColors.urgentRed,
+                                icon: Icons.error_outline,
+                                background: _kpiCriticalBg,
+                                accent: _kpiCriticalAccent,
                                 onTap: () => _open(const EmergenciesListScreen(
                                   title: 'Emergencias críticas',
                                   statusFilter: _activeStatuses,
@@ -174,8 +229,9 @@ class _HomeScreenState extends State<HomeScreen> {
                               _KpiCard(
                                 label: 'Reportadas hoy',
                                 value: '${stats.reportedToday}',
-                                icon: Icons.today,
-                                color: AppColors.secondary,
+                                icon: Icons.today_outlined,
+                                background: _kpiTodayBg,
+                                accent: _kpiTodayAccent,
                                 onTap: () => _open(const EmergenciesListScreen(
                                   title: 'Reportadas hoy',
                                   reportedTodayOnly: true,
@@ -185,7 +241,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                 label: 'Resueltas',
                                 value: '${stats.resolvedTotal}',
                                 icon: Icons.check_circle_outline,
-                                color: AppColors.resolvedGreen,
+                                background: _kpiResolvedBg,
+                                accent: _kpiResolvedAccent,
                                 onTap: () => _open(const EmergenciesListScreen(
                                   title: 'Emergencias resueltas',
                                   statusFilter: ['RESUELTA'],
@@ -194,8 +251,9 @@ class _HomeScreenState extends State<HomeScreen> {
                               _KpiCard(
                                 label: 'Asignaciones pendientes',
                                 value: '${stats.pendingAssignments}',
-                                icon: Icons.pending_actions,
-                                color: AppColors.accent,
+                                icon: Icons.assignment_late_outlined,
+                                background: _kpiPendingBg,
+                                accent: _kpiPendingAccent,
                                 onTap: () => _open(const DispatchListScreen(
                                   title: 'Asignaciones pendientes',
                                   statusFilter: ['SOLICITADA'],
@@ -205,13 +263,14 @@ class _HomeScreenState extends State<HomeScreen> {
                                 label: 'Unidades disponibles',
                                 value: '${stats.unitsAvailable}/${stats.unitsTotal}',
                                 icon: Icons.local_shipping_outlined,
-                                color: AppColors.accentSoft,
+                                background: _kpiUnitsBg,
+                                accent: _kpiUnitsAccent,
                                 onTap: () => _open(const GpsScreen()),
                               ),
                             ],
                           ),
                         ),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 10),
                         ConstrainedBox(
                           constraints: const BoxConstraints(minHeight: 56),
                           child: SizedBox(
@@ -220,9 +279,15 @@ class _HomeScreenState extends State<HomeScreen> {
                               margin: EdgeInsets.zero,
                               child: ListTile(
                                 dense: true,
-                                leading: const Icon(Icons.timer_outlined),
-                                title: const Text('Tiempo de respuesta promedio'),
-                                trailing: Text('${stats.avgResponseMinutes} min'),
+                                leading: const Icon(Icons.timer_outlined, color: AppColors.textSecondary),
+                                title: const Text(
+                                  'Tiempo de respuesta promedio',
+                                  style: TextStyle(fontSize: 14, color: AppColors.textPrimary),
+                                ),
+                                trailing: Text(
+                                  '${stats.avgResponseMinutes} min',
+                                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
+                                ),
                                 onTap: () => _open(const EmergenciesListScreen(
                                   title: 'Emergencias resueltas',
                                   statusFilter: ['RESUELTA'],
@@ -311,26 +376,31 @@ class _KpiCard extends StatelessWidget {
   final String label;
   final String value;
   final IconData icon;
-  final Color color;
+  // Fondo pastel bien definido (no el color de acento diluido al vuelo) +
+  // un único color de acento fuerte para ícono y número — "fondos suaves +
+  // números/íconos fuertes" en vez de tarjetas saturadas de color.
+  final Color background;
+  final Color accent;
   final VoidCallback onTap;
 
   const _KpiCard({
     required this.label,
     required this.value,
     required this.icon,
-    required this.color,
+    required this.background,
+    required this.accent,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     return Card(
-      color: color.withValues(alpha: 0.08),
+      color: background,
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
           // FittedBox mide el contenido a un ancho fijo (para que el texto
           // siga ajustando línea normalmente) y lo encoge como bloque si no
           // entra en el alto real disponible, en vez de desbordar.
@@ -341,7 +411,7 @@ class _KpiCard extends StatelessWidget {
                 alignment: Alignment.centerLeft,
                 child: SizedBox(
                   width: constraints.maxWidth,
-                  child: _KpiCardContent(label: label, value: value, icon: icon, color: color),
+                  child: _KpiCardContent(label: label, value: value, icon: icon, accent: accent),
                 ),
               );
             },
@@ -356,9 +426,9 @@ class _KpiCardContent extends StatelessWidget {
   final String label;
   final String value;
   final IconData icon;
-  final Color color;
+  final Color accent;
 
-  const _KpiCardContent({required this.label, required this.value, required this.icon, required this.color});
+  const _KpiCardContent({required this.label, required this.value, required this.icon, required this.accent});
 
   @override
   Widget build(BuildContext context) {
@@ -369,16 +439,18 @@ class _KpiCardContent extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Icon(icon, color: color, size: 20),
-            Icon(Icons.chevron_right, color: color.withValues(alpha: 0.6), size: 18),
+            Icon(icon, color: accent, size: 28),
+            Icon(Icons.chevron_right, color: accent.withValues(alpha: 0.55), size: 18),
           ],
         ),
-        const SizedBox(height: 4),
-        Text(value, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: color)),
+        const SizedBox(height: 6),
+        // Número: la información prioritaria de la tarjeta — debe
+        // reconocerse antes que la etiqueta que lo explica.
+        Text(value, style: TextStyle(fontSize: 34, fontWeight: FontWeight.w700, color: accent, height: 1)),
         const SizedBox(height: 2),
         Text(
           label,
-          style: const TextStyle(fontSize: 11, height: 1.15),
+          style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w500, height: 1.2, color: AppColors.textSecondary),
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
         ),
