@@ -76,17 +76,21 @@ class AppTheme {
         surfaceTintColor: Colors.transparent,
         elevation: AppSpacing.elevationSm,
         height: AppSpacing.bottomNavHeight,
+        // Sans-serif explícito (no AppTextStyles.labelSmall, que usa una
+        // serif de acento) y un poco más grande que el resto de labels
+        // pequeños de la app, para que la navegación principal se lea bien
+        // de un vistazo.
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
-            return AppTextStyles.labelSmall.copyWith(color: AppColors.primaryDark, fontWeight: FontWeight.w600);
+            return const TextStyle(fontSize: 12.5, color: AppColors.primaryDark, fontWeight: FontWeight.w600);
           }
-          return AppTextStyles.labelSmall.copyWith(color: AppColors.textTertiary);
+          return const TextStyle(fontSize: 12.5, color: AppColors.textTertiary, fontWeight: FontWeight.w400);
         }),
         iconTheme: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
-            return const IconThemeData(color: AppColors.primaryDark, size: AppSpacing.iconMd);
+            return const IconThemeData(color: AppColors.primaryDark, size: 27);
           }
-          return const IconThemeData(color: AppColors.textTertiary, size: AppSpacing.iconMd);
+          return const IconThemeData(color: AppColors.textTertiary, size: 27);
         }),
         indicatorColor: AppColors.primary.withValues(alpha: 0.16),
       ),

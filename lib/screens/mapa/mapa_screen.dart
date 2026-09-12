@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:flutter_map_marker_cluster/flutter_map_marker_cluster.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 
@@ -27,6 +28,45 @@ import '../operacion/emergency_form_screen.dart';
 const _cochabamba = LatLng(-17.3895, -66.1568);
 const _minZoom = 5.0;
 const _maxZoom = 19.0;
+
+// Filtros del mapa de emergencias — mismos dos campos que trae
+// GET /api/dashboard/emergencies/map (priority/status; sin tipo).
+const _mapPriorityOrder = ['CRITICA', 'ALTA', 'MEDIA', 'BAJA'];
+const _mapPriorityLabels = {
+  'CRITICA': 'Crítica',
+  'ALTA': 'Alta',
+  'MEDIA': 'Media',
+  'BAJA': 'Baja',
+};
+const _mapStatusOrder = ['REPORTADA', 'EN_ANALISIS', 'CLASIFICADA', 'ASIGNADA', 'EN_ATENCION'];
+const _mapStatusLabels = {
+  'REPORTADA': 'Reportada',
+  'EN_ANALISIS': 'En análisis',
+  'CLASIFICADA': 'Clasificada',
+  'ASIGNADA': 'Asignada',
+  'EN_ATENCION': 'En atención',
+};
+// Mismos colores que la vista agrupada de Operación > Emergencias, para que
+// un mismo estado se reconozca con el mismo color en toda la app.
+const _mapStatusColors = {
+  'REPORTADA': AppColors.moderateOrange,
+  'EN_ANALISIS': AppColors.secondary,
+  'CLASIFICADA': AppColors.accent,
+  'ASIGNADA': AppColors.primary,
+  'EN_ATENCION': AppColors.urgentRed,
+};
+// El mapa operativo no trae el tipo de emergencia (GET .../emergencies/map
+// solo devuelve priority/status, sin FK_emergencyType) — así que, a falta
+// de eso, cada pin varía su ícono según en qué punto del flujo está, para
+// que no todos se vean como el mismo símbolo genérico de "emergency". El
+// color ya distingue la prioridad (ver `priorityColors`).
+const _mapStatusIcons = {
+  'REPORTADA': Icons.report_gmailerrorred,
+  'EN_ANALISIS': Icons.search,
+  'CLASIFICADA': Icons.label_important_outline,
+  'ASIGNADA': Icons.assignment_ind_outlined,
+  'EN_ATENCION': Icons.directions_run,
+};
 // Alto aproximado del campo de búsqueda de sectores (TextField ~56 + margen
 // AppSpacing.md arriba/abajo) — los controles de zoom se posicionan debajo
 // para no superponerse, tanto si está el campo vacío como el chip de zona
@@ -115,7 +155,19 @@ class _MapaScreenState extends State<MapaScreen> with SingleTickerProviderStateM
 
 /// Marcador circular de color sólido con ícono, igual al `AnimatedMarker` de
 /// arconde-gamc (lib/features/map/presentation/widgets/map_markers.dart).
+///
+/// Sin animación de entrada: en el mapa real de arconde (AppMap, sobre
+/// flutter_map) los pines NO se desvanecen al aparecer — ese efecto vive en
+/// un widget aparte (`MapMarkersLayer`) que no usa flutter_map. Acá lo
+/// habíamos agregado por error y, combinado con cómo flutter_map reconstruye
+/// los marcadores durante un gesto de zoom, hacía que algunos pines se
+/// vieran "perderse" (arrancaban de opacidad 0) y reaparecieran después.
+/// El único movimiento continuo es el `pulseGlow` de las críticas, que
+/// nunca baja de 40% de opacidad — por eso no desaparece.
 class _DotMarker extends StatelessWidget {
+  static const outerSize = 56.0;
+  static const coreSize = 22.0;
+
   final Color color;
   final IconData icon;
   final VoidCallback? onTap;
@@ -128,22 +180,89 @@ class _DotMarker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final marker = Container(
-      padding: const EdgeInsets.all(6),
+    // Halo semitransparente con degradado radial: opaco/saturado en el
+    // centro, se desvanece a alpha 0 en el borde para integrarse con las
+    // calles del mapa en vez de cortar en seco como un círculo sólido.
+    final glow = Container(
+      width: outerSize,
+      height: outerSize,
+      alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: color,
         shape: BoxShape.circle,
-        boxShadow: [
-          BoxShadow(color: color.withValues(alpha: pulse ? 0.6 : 0.5), blurRadius: pulse ? 16 : 10, spreadRadius: pulse ? 4 : 2),
-        ],
-        border: Border.all(color: AppColors.surfacePrimary, width: 2),
+        gradient: RadialGradient(
+          colors: [
+            color.withValues(alpha: 0.85),
+            color.withValues(alpha: 0.35),
+            color.withValues(alpha: 0.0),
+          ],
+          stops: const [0.0, 0.45, 1.0],
+        ),
       ),
-      child: Icon(icon, size: 18, color: AppColors.textOnPrimary),
+      // Núcleo sólido pequeño con el ícono: mantiene la lectura del tipo de
+      // estado y el contraste, mientras el halo alrededor hace de "glow".
+      child: Container(
+        width: coreSize,
+        height: coreSize,
+        decoration: BoxDecoration(
+          color: color,
+          shape: BoxShape.circle,
+          border: Border.all(color: AppColors.surfacePrimary, width: 2),
+          boxShadow: [BoxShadow(color: color.withValues(alpha: 0.5), blurRadius: 6, spreadRadius: 1)],
+        ),
+        child: Icon(icon, size: 13, color: AppColors.textOnPrimary),
+      ),
     );
     final animated = pulse
-        ? marker.pulseGlow(minScale: 1.0, maxScale: 1.15, minOpacity: 0.4, maxOpacity: 1.0, duration: const Duration(milliseconds: 1500))
-        : marker;
+        ? glow.pulseGlow(minScale: 1.0, maxScale: 1.12, minOpacity: 0.55, maxOpacity: 1.0, duration: const Duration(milliseconds: 1500))
+        : glow;
     return GestureDetector(onTap: onTap, child: animated);
+  }
+}
+
+/// Burbuja de clúster: mismo lenguaje visual que [_DotMarker] (halo con
+/// degradado radial) para que un grupo de reportes cercanos se vea como
+/// una mancha semitransparente con el número adentro, en vez de varios
+/// círculos sólidos superpuestos.
+class _ClusterBubble extends StatelessWidget {
+  final int count;
+  final Color color;
+
+  const _ClusterBubble({required this.count, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    final size = (44 + count.clamp(0, 20) * 0.8).clamp(44, 64).toDouble();
+    return Container(
+      width: size,
+      height: size,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: RadialGradient(
+          colors: [
+            color.withValues(alpha: 0.85),
+            color.withValues(alpha: 0.4),
+            color.withValues(alpha: 0.0),
+          ],
+          stops: const [0.0, 0.5, 1.0],
+        ),
+      ),
+      child: Container(
+        width: size * 0.6,
+        height: size * 0.6,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: color,
+          shape: BoxShape.circle,
+          border: Border.all(color: AppColors.surfacePrimary, width: 2),
+          boxShadow: [BoxShadow(color: color.withValues(alpha: 0.5), blurRadius: 8, spreadRadius: 1)],
+        ),
+        child: Text(
+          '$count',
+          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+        ),
+      ),
+    );
   }
 }
 
@@ -232,6 +351,15 @@ class _EmergenciesMapTabState extends State<_EmergenciesMapTab> with _LocateMeMi
   LatLng? _userLocation;
   GeoSearchResult? _selectedZone;
 
+  // GET .../emergencies/map solo devuelve emergencias activas (ver
+  // ACTIVE_STATUSES en el backend) con priority/status — sin tipo de
+  // emergencia embebido — así que los filtros del mapa se arman sobre esos
+  // dos campos, igual que el grupo "Nivel de urgencia" de arconde-gamc.
+  final Map<String, bool> _priorityFilters = {for (final p in _mapPriorityOrder) p: true};
+  final Map<String, bool> _statusFilters = {for (final s in _mapStatusOrder) s: true};
+
+  bool get _filtersActive => _priorityFilters.containsValue(false) || _statusFilters.containsValue(false);
+
   @override
   MapController get mapController => _mapController;
 
@@ -259,15 +387,18 @@ class _EmergenciesMapTabState extends State<_EmergenciesMapTab> with _LocateMeMi
     }
   }
 
-  /// Emergencias visibles: todas, o solo las que caen dentro de la
-  /// geometría real del sector elegido (punto-en-polígono, no coincidencia
-  /// de nombre).
+  /// Emergencias visibles: dentro del sector elegido (si hay uno, por
+  /// punto-en-polígono) y que pasen los filtros de prioridad/estado.
   List<Map<String, dynamic>> get _visibleItems {
     final geometry = _selectedZone?.geometry;
-    if (geometry == null || !geometry.isArea) return _items;
     return _items.where((e) {
-      final point = LatLng(e['latitude'], e['longitude']);
-      return isPointInZone(point, geometry);
+      if (geometry != null && geometry.isArea) {
+        final point = LatLng(e['latitude'], e['longitude']);
+        if (!isPointInZone(point, geometry)) return false;
+      }
+      if (!(_priorityFilters[e['priority']] ?? true)) return false;
+      if (!(_statusFilters[e['status']] ?? true)) return false;
+      return true;
     }).toList();
   }
 
@@ -280,6 +411,28 @@ class _EmergenciesMapTabState extends State<_EmergenciesMapTab> with _LocateMeMi
 
   void _onZoneCleared() => setState(() => _selectedZone = null);
 
+  void _showFilterSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _MapFilterSheet(
+        initialPriorityFilters: _priorityFilters,
+        initialStatusFilters: _statusFilters,
+        onApply: (priority, status) {
+          setState(() {
+            _priorityFilters
+              ..clear()
+              ..addAll(priority);
+            _statusFilters
+              ..clear()
+              ..addAll(status);
+          });
+        },
+      ),
+    );
+  }
+
   void _onZoomIn() {
     final camera = _mapController.camera;
     _mapController.move(camera.center, (camera.zoom + 1).clamp(_minZoom, _maxZoom));
@@ -290,6 +443,21 @@ class _EmergenciesMapTabState extends State<_EmergenciesMapTab> with _LocateMeMi
     _mapController.move(camera.center, (camera.zoom - 1).clamp(_minZoom, _maxZoom));
   }
 
+  /// Color representativo del clúster: si agrupa alguna crítica, se pinta
+  /// crítico (para no esconder una emergencia grave dentro de un grupo con
+  /// color "tranquilo"); si no, el color del primer pin del grupo.
+  Color _clusterColor(List<Marker> markers) {
+    Color? fallback;
+    for (final m in markers) {
+      final child = m.child;
+      if (child is _DotMarker) {
+        if (child.pulse) return child.color;
+        fallback ??= child.color;
+      }
+    }
+    return fallback ?? AppColors.primary;
+  }
+
   void _showDetail(Map<String, dynamic> e) {
     showModalBottomSheet(
       context: context,
@@ -297,10 +465,10 @@ class _EmergenciesMapTabState extends State<_EmergenciesMapTab> with _LocateMeMi
         child: ListTile(
           leading: CircleAvatar(
             backgroundColor: (priorityColors[e['priority']] ?? AppColors.textTertiary).withValues(alpha: 0.15),
-            child: Icon(Icons.emergency, color: priorityColors[e['priority']] ?? AppColors.textTertiary),
+            child: Icon(_mapStatusIcons[e['status']] ?? Icons.emergency, color: priorityColors[e['priority']] ?? AppColors.textTertiary),
           ),
           title: Text(e['emergencyCode'] ?? ''),
-          subtitle: Text('${e['priority'] ?? ''} · ${e['status'] ?? ''}'),
+          subtitle: Text('${_mapPriorityLabels[e['priority']] ?? e['priority'] ?? ''} · ${_mapStatusLabels[e['status']] ?? e['status'] ?? ''}'),
           trailing: const Icon(Icons.chevron_right),
           onTap: () {
             Navigator.of(context).pop();
@@ -356,20 +524,32 @@ class _EmergenciesMapTabState extends State<_EmergenciesMapTab> with _LocateMeMi
                         ))
                     .toList(),
               ),
-            MarkerLayer(
-              markers: visibleItems
-                  .map((e) => Marker(
-                        point: LatLng(e['latitude'], e['longitude']),
-                        width: 40,
-                        height: 40,
-                        child: _DotMarker(
-                          color: priorityColors[e['priority']] ?? AppColors.textTertiary,
-                          icon: Icons.emergency,
-                          onTap: () => _showDetail(e),
-                          pulse: e['priority'] == 'CRITICA',
-                        ),
-                      ))
-                  .toList(),
+            // Clúster: agrupa pines cercanos en pantalla (no solo por
+            // lat/lng crudos) para que, alejando el zoom, varios reportes
+            // juntos se vean como una sola mancha semitransparente con el
+            // número adentro en vez de círculos sólidos superpuestos.
+            MarkerClusterLayerWidget(
+              options: MarkerClusterLayerOptions(
+                maxClusterRadius: 45,
+                size: const Size(_DotMarker.outerSize, _DotMarker.outerSize),
+                alignment: Alignment.center,
+                markerChildBehavior: true,
+                spiderfyCluster: false,
+                markers: visibleItems
+                    .map((e) => Marker(
+                          point: LatLng(e['latitude'], e['longitude']),
+                          width: _DotMarker.outerSize,
+                          height: _DotMarker.outerSize,
+                          child: _DotMarker(
+                            color: priorityColors[e['priority']] ?? AppColors.textTertiary,
+                            icon: _mapStatusIcons[e['status']] ?? Icons.emergency,
+                            onTap: () => _showDetail(e),
+                            pulse: e['priority'] == 'CRITICA',
+                          ),
+                        ))
+                    .toList(),
+                builder: (context, markers) => _ClusterBubble(count: markers.length, color: _clusterColor(markers)),
+              ),
             ),
             if (_userLocation != null)
               MarkerLayer(markers: [
@@ -391,6 +571,8 @@ class _EmergenciesMapTabState extends State<_EmergenciesMapTab> with _LocateMeMi
               filteredCount: _selectedZone == null ? null : visibleItems.length,
               onZoneSelected: _onZoneSelected,
               onZoneCleared: _onZoneCleared,
+              onFilterPressed: _showFilterSheet,
+              filtersActive: _filtersActive,
             ),
           ),
         ),
@@ -434,6 +616,144 @@ class _EmergenciesMapTabState extends State<_EmergenciesMapTab> with _LocateMeMi
           ).animate().fadeIn(delay: 300.ms, duration: 400.ms).slideY(begin: 0.5, end: 0),
         ),
       ],
+    );
+  }
+}
+
+/// Hoja de filtros del mapa de emergencias — mismo patrón que
+/// `_FilterBottomSheet` de arconde-gamc (home_page.dart): grupos de
+/// FilterChip por categoría, "Todos" para resetear y "Aplicar filtros"
+/// para confirmar sin afectar el mapa mientras se está eligiendo.
+class _MapFilterSheet extends StatefulWidget {
+  final Map<String, bool> initialPriorityFilters;
+  final Map<String, bool> initialStatusFilters;
+  final void Function(Map<String, bool> priority, Map<String, bool> status) onApply;
+
+  const _MapFilterSheet({
+    required this.initialPriorityFilters,
+    required this.initialStatusFilters,
+    required this.onApply,
+  });
+
+  @override
+  State<_MapFilterSheet> createState() => _MapFilterSheetState();
+}
+
+class _MapFilterSheetState extends State<_MapFilterSheet> {
+  late final Map<String, bool> _priority = Map.of(widget.initialPriorityFilters);
+  late final Map<String, bool> _status = Map.of(widget.initialStatusFilters);
+
+  @override
+  Widget build(BuildContext context) {
+    return DraggableScrollableSheet(
+      initialChildSize: 0.55,
+      minChildSize: 0.35,
+      maxChildSize: 0.85,
+      expand: false,
+      builder: (context, scrollController) {
+        return Container(
+          decoration: const BoxDecoration(
+            color: AppColors.surfacePrimary,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(AppSpacing.borderRadiusXl)),
+          ),
+          child: Column(
+            children: [
+              Container(
+                margin: const EdgeInsets.only(top: AppSpacing.md, bottom: AppSpacing.sm),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.borderSecondary,
+                  borderRadius: BorderRadius.circular(AppSpacing.borderRadiusFull),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                child: Row(
+                  children: [
+                    const Text('Filtros del mapa', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+                    const Spacer(),
+                    TextButton(
+                      onPressed: () => setState(() {
+                        _priority.updateAll((_, __) => true);
+                        _status.updateAll((_, __) => true);
+                      }),
+                      child: const Text('Todos'),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1, color: AppColors.divider),
+              Expanded(
+                child: ListView(
+                  controller: scrollController,
+                  padding: const EdgeInsets.all(AppSpacing.md),
+                  children: [
+                    const Text('Prioridad', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                    const SizedBox(height: AppSpacing.sm),
+                    Wrap(
+                      spacing: AppSpacing.sm,
+                      runSpacing: AppSpacing.sm,
+                      children: [
+                        for (final p in _mapPriorityOrder)
+                          _buildChip(
+                            selected: _priority[p] ?? true,
+                            label: _mapPriorityLabels[p] ?? p,
+                            color: priorityColors[p] ?? AppColors.textTertiary,
+                            onSelected: (v) => setState(() => _priority[p] = v),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                    const Text('Estado', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                    const SizedBox(height: AppSpacing.sm),
+                    Wrap(
+                      spacing: AppSpacing.sm,
+                      runSpacing: AppSpacing.sm,
+                      children: [
+                        for (final s in _mapStatusOrder)
+                          _buildChip(
+                            selected: _status[s] ?? true,
+                            label: _mapStatusLabels[s] ?? s,
+                            color: _mapStatusColors[s] ?? AppColors.textTertiary,
+                            onSelected: (v) => setState(() => _status[s] = v),
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(AppSpacing.md),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(
+                    onPressed: () {
+                      widget.onApply(_priority, _status);
+                      Navigator.pop(context);
+                    },
+                    child: const Text('Aplicar filtros'),
+                  ),
+                ),
+              ),
+              SizedBox(height: MediaQuery.of(context).padding.bottom),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildChip({required bool selected, required String label, required Color color, required ValueChanged<bool> onSelected}) {
+    return FilterChip(
+      label: Text(label, style: TextStyle(fontSize: 12, color: selected ? Colors.white : color)),
+      selected: selected,
+      onSelected: onSelected,
+      backgroundColor: color.withValues(alpha: 0.1),
+      selectedColor: color,
+      checkmarkColor: Colors.white,
+      visualDensity: VisualDensity.compact,
+      side: BorderSide(color: color.withValues(alpha: 0.4)),
     );
   }
 }
@@ -523,18 +843,19 @@ class _UnitsMapTabState extends State<_UnitsMapTab> with _LocateMeMixin {
               maxZoom: 19,
             ),
             MarkerLayer(
-              markers: _units
-                  .map((u) => Marker(
-                        point: LatLng(u['latitude'], u['longitude']),
-                        width: 40,
-                        height: 40,
-                        child: _DotMarker(
-                          color: AppColors.secondary,
-                          icon: Icons.local_shipping,
-                          onTap: () => _showDetail(u),
-                        ),
-                      ))
-                  .toList(),
+              markers: [
+                for (final u in _units)
+                  Marker(
+                    point: LatLng(u['latitude'], u['longitude']),
+                    width: 40,
+                    height: 40,
+                    child: _DotMarker(
+                      color: AppColors.secondary,
+                      icon: Icons.local_shipping,
+                      onTap: () => _showDetail(u),
+                    ),
+                  ),
+              ],
             ),
             if (_userLocation != null)
               MarkerLayer(markers: [

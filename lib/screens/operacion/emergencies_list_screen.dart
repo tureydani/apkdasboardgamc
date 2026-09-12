@@ -1,3 +1,4 @@
+﻿import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
 
 import '../../app/theme/index.dart';
@@ -13,7 +14,7 @@ const priorityColors = {
 };
 
 const _priorityOrder = ['CRITICA', 'ALTA', 'MEDIA', 'BAJA'];
-const _priorityLabels = {
+const priorityLabels = {
   'CRITICA': 'Crítica',
   'ALTA': 'Alta',
   'MEDIA': 'Media',
@@ -23,7 +24,9 @@ const _priorityLabels = {
 // Mismo flujo operativo que `_statusFlow` en emergency_detail_screen.dart:
 // REPORTADA -> EN_ANALISIS -> CLASIFICADA -> ASIGNADA -> EN_ATENCION ->
 // RESUELTA (o FALSA_ALARMA / CANCELADA en cualquier punto antes de cerrar).
-const _statusOrder = [
+// Públicos (sin guion bajo) porque emergency_detail_screen.dart los reutiliza
+// para el encabezado y la línea de tiempo de estados.
+const emergencyStatusOrder = [
   'REPORTADA',
   'EN_ANALISIS',
   'CLASIFICADA',
@@ -33,7 +36,7 @@ const _statusOrder = [
   'FALSA_ALARMA',
   'CANCELADA',
 ];
-const _statusLabels = {
+const emergencyStatusLabels = {
   'REPORTADA': 'Reportada',
   'EN_ANALISIS': 'En análisis',
   'CLASIFICADA': 'Clasificada',
@@ -43,7 +46,7 @@ const _statusLabels = {
   'FALSA_ALARMA': 'Falsa alarma',
   'CANCELADA': 'Cancelada',
 };
-const _statusColors = {
+const emergencyStatusColors = {
   'REPORTADA': AppColors.moderateOrange,
   'EN_ANALISIS': AppColors.secondary,
   'CLASIFICADA': AppColors.accent,
@@ -88,15 +91,21 @@ class EmergenciesListScreen extends StatefulWidget {
 class _EmergenciesListScreenState extends State<EmergenciesListScreen> {
   final _service = EmergencyService();
   final _searchCtrl = TextEditingController();
+  final _searchFocus = FocusNode();
   List<Map<String, dynamic>> _items = [];
   bool _loading = true;
   String? _error;
 
+  /// Los filtros arrancan ocultos para no saturar la barra de búsqueda —
+  /// aparecen recién cuando el usuario toca el buscador (o el ícono de
+  /// filtro), y se pueden volver a ocultar desde ahí mismo.
+  bool _filtersVisible = false;
+
   /// Estados que este botón de Operación habilita ver, en orden de flujo.
-  late final List<String> _statusScope = (widget.statusFilter ?? _statusOrder)
-      .where(_statusOrder.contains)
+  late final List<String> _statusScope = (widget.statusFilter ?? emergencyStatusOrder)
+      .where(emergencyStatusOrder.contains)
       .toList()
-    ..sort((a, b) => _statusOrder.indexOf(a).compareTo(_statusOrder.indexOf(b)));
+    ..sort((a, b) => emergencyStatusOrder.indexOf(a).compareTo(emergencyStatusOrder.indexOf(b)));
 
   /// null = "Todas" (dentro del alcance de arriba) → vista agrupada por
   /// estado. Un valor puntual → lista plana filtrada a ese estado.
@@ -107,7 +116,19 @@ class _EmergenciesListScreenState extends State<EmergenciesListScreen> {
   void initState() {
     super.initState();
     _selectedPriority = widget.priorityFilter;
+    _searchFocus.addListener(() {
+      if (_searchFocus.hasFocus && !_filtersVisible) {
+        setState(() => _filtersVisible = true);
+      }
+    });
     _load();
+  }
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    _searchFocus.dispose();
+    super.dispose();
   }
 
   Future<void> _load() async {
@@ -172,10 +193,19 @@ class _EmergenciesListScreenState extends State<EmergenciesListScreen> {
             padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
             child: TextField(
               controller: _searchCtrl,
+              focusNode: _searchFocus,
               onSubmitted: (_) => _load(),
               decoration: InputDecoration(
                 hintText: 'Buscar por código o descripción...',
                 prefixIcon: const Icon(Icons.search),
+                // Ícono de filtro: además de aparecer solos al tocar el
+                // campo, se pueden abrir/cerrar a mano desde acá sin tener
+                // que enfocar el teclado.
+                suffixIcon: IconButton(
+                  icon: Icon(_filtersVisible ? Icons.filter_alt : Icons.filter_alt_outlined),
+                  tooltip: _filtersVisible ? 'Ocultar filtros' : 'Mostrar filtros',
+                  onPressed: () => setState(() => _filtersVisible = !_filtersVisible),
+                ),
                 filled: true,
                 fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: BorderSide.none),
@@ -183,8 +213,19 @@ class _EmergenciesListScreenState extends State<EmergenciesListScreen> {
               ),
             ),
           ),
-          if (_statusScope.length > 1) _buildStatusFilterRow(),
-          _buildPriorityFilterRow(),
+          AnimatedSize(
+            duration: const Duration(milliseconds: 200),
+            alignment: Alignment.topCenter,
+            child: !_filtersVisible
+                ? const SizedBox(width: double.infinity)
+                : Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (_statusScope.length > 1) _buildStatusFilterRow(),
+                      _buildPriorityFilterRow(),
+                    ],
+                  ),
+          ),
           const Divider(height: 1),
           Expanded(
             child: RefreshIndicator(
@@ -196,7 +237,7 @@ class _EmergenciesListScreenState extends State<EmergenciesListScreen> {
                       : _visibleItems.isEmpty
                           ? ListView(children: const [SizedBox(height: 80), Center(child: Text('Sin emergencias'))])
                           : _selectedStatus == null
-                              ? _buildGroupedList()
+                              ? _StatusPager(groups: _groupedByStatus, buildList: _buildFlatList)
                               : _buildFlatList(_visibleItems),
             ),
           ),
@@ -232,9 +273,9 @@ class _EmergenciesListScreenState extends State<EmergenciesListScreen> {
           ),
           for (final status in _statusScope)
             _filterChip(
-              label: _statusLabels[status] ?? status,
+              label: emergencyStatusLabels[status] ?? status,
               selected: _selectedStatus == status,
-              color: _statusColors[status] ?? AppColors.textTertiary,
+              color: emergencyStatusColors[status] ?? AppColors.textTertiary,
               onSelected: () => setState(() => _selectedStatus = status),
             ),
         ],
@@ -257,7 +298,7 @@ class _EmergenciesListScreenState extends State<EmergenciesListScreen> {
           ),
           for (final priority in _priorityOrder)
             _filterChip(
-              label: _priorityLabels[priority] ?? priority,
+              label: priorityLabels[priority] ?? priority,
               selected: _selectedPriority == priority,
               color: priorityColors[priority] ?? AppColors.textTertiary,
               onSelected: () => setState(() => _selectedPriority = priority),
@@ -283,52 +324,11 @@ class _EmergenciesListScreenState extends State<EmergenciesListScreen> {
     );
   }
 
-  /// Vista "Todas": una sección por estado (en orden de flujo), con
-  /// encabezado de color + cantidad, para que se entienda de un vistazo
-  /// cómo se reparten las emergencias entre sus distintos estados.
-  Widget _buildGroupedList() {
-    final groups = _groupedByStatus;
-    return ListView.builder(
-      itemCount: groups.length,
-      itemBuilder: (context, i) {
-        final status = groups[i].key;
-        final items = groups[i].value;
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildStatusHeader(status, items.length),
-            ...items.map(_buildTile),
-            const Divider(height: 1),
-          ],
-        );
-      },
-    );
-  }
-
   Widget _buildFlatList(List<Map<String, dynamic>> items) {
     return ListView.separated(
       itemCount: items.length,
       separatorBuilder: (_, __) => const Divider(height: 1),
       itemBuilder: (context, i) => _buildTile(items[i]),
-    );
-  }
-
-  Widget _buildStatusHeader(String status, int count) {
-    final color = _statusColors[status] ?? AppColors.textTertiary;
-    return Container(
-      width: double.infinity,
-      color: color.withValues(alpha: 0.1),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      child: Row(
-        children: [
-          Container(width: 8, height: 8, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
-          const SizedBox(width: 8),
-          Text(
-            '${_statusLabels[status] ?? status} · $count',
-            style: TextStyle(color: color, fontWeight: FontWeight.w700, fontSize: 12),
-          ),
-        ],
-      ),
     );
   }
 
@@ -354,6 +354,120 @@ class _EmergenciesListScreenState extends State<EmergenciesListScreen> {
         );
         _load();
       },
+    );
+  }
+}
+
+/// Vista "Todas": en vez de apilar las secciones por estado una debajo de
+/// la otra, las muestra una por vez y se navega entre ellas deslizando el
+/// dedo a los lados (o tocando su pestaña) — reportada → asignada → en
+/// atención, en el mismo orden del flujo operativo. Widget aparte (no un
+/// método más del State de arriba) porque necesita su propio
+/// PageController con ciclo de vida propio.
+class _StatusPager extends StatefulWidget {
+  final List<MapEntry<String, List<Map<String, dynamic>>>> groups;
+  final Widget Function(List<Map<String, dynamic>> items) buildList;
+
+  const _StatusPager({required this.groups, required this.buildList});
+
+  @override
+  State<_StatusPager> createState() => _StatusPagerState();
+}
+
+class _StatusPagerState extends State<_StatusPager> {
+  final _controller = PageController();
+  int _page = 0;
+
+  @override
+  void didUpdateWidget(covariant _StatusPager oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final oldKeys = oldWidget.groups.map((g) => g.key).toList();
+    final newKeys = widget.groups.map((g) => g.key).toList();
+    if (!listEquals(oldKeys, newKeys)) {
+      // Cambió qué estados tienen resultados (recarga, filtro de
+      // prioridad): la página que se estaba mirando puede ya no existir,
+      // así que se vuelve a arrancar desde la primera.
+      _page = 0;
+      if (_controller.hasClients) _controller.jumpToPage(0);
+    } else if (_page >= widget.groups.length) {
+      _page = 0;
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _goTo(int index) {
+    _controller.animateToPage(index, duration: const Duration(milliseconds: 250), curve: Curves.easeOut);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final groups = widget.groups;
+    if (groups.isEmpty) return const SizedBox.shrink();
+    // Un solo estado con resultados: nada entre lo cual deslizar.
+    if (groups.length == 1) return widget.buildList(groups.first.value);
+
+    return Column(
+      children: [
+        _buildTabs(groups),
+        const Divider(height: 1),
+        Expanded(
+          child: PageView(
+            controller: _controller,
+            onPageChanged: (i) => setState(() => _page = i),
+            children: [for (final group in groups) widget.buildList(group.value)],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTabs(List<MapEntry<String, List<Map<String, dynamic>>>> groups) {
+    return SizedBox(
+      height: 52,
+      child: Row(
+        children: [
+          for (var i = 0; i < groups.length; i++) Expanded(child: _buildTab(groups[i].key, groups[i].value.length, i)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTab(String status, int count, int index) {
+    final selected = index == _page;
+    final color = emergencyStatusColors[status] ?? AppColors.textTertiary;
+    return InkWell(
+      onTap: () => _goTo(index),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        margin: const EdgeInsets.symmetric(horizontal: 3, vertical: 6),
+        decoration: BoxDecoration(
+          color: selected ? color.withValues(alpha: 0.12) : Colors.transparent,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              emergencyStatusLabels[status] ?? status,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                color: selected ? color : AppColors.textSecondary,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 2),
+            Text('$count', style: TextStyle(fontSize: 11, color: selected ? color : AppColors.textTertiary)),
+          ],
+        ),
+      ),
     );
   }
 }
