@@ -84,7 +84,6 @@ class _PerfilScreenState extends State<PerfilScreen> {
     final user = context.watch<SessionProvider>().user;
 
     return AppScaffold(
-      title: 'Perfil',
       body: user == null
           ? const Center(child: Text('No hay una sesión activa.'))
           : RefreshIndicator(

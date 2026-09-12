@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../../app/theme/index.dart';
 import '../../../core/api_client.dart';
+import '../../../core/utils/responsive.dart';
 import '../../../providers/session_provider.dart';
 import '../../../services/catalog_services.dart';
 
@@ -294,7 +295,7 @@ class _UserFormDialogState extends State<_UserFormDialog> {
     return AlertDialog(
       title: Text(_isEdit ? 'Editar usuario' : 'Nuevo usuario'),
       content: SizedBox(
-        width: 420,
+        width: dialogContentWidth(context, 420),
         child: _loadingOptions
             ? const SizedBox(height: 120, child: Center(child: CircularProgressIndicator()))
             : Form(

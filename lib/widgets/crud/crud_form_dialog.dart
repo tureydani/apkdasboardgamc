@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../app/theme/index.dart';
+import '../../core/utils/responsive.dart';
 import 'crud_config.dart';
 import 'field_spec.dart';
 
@@ -127,7 +128,7 @@ class _CrudFormDialogState extends State<CrudFormDialog> {
     return AlertDialog(
       title: Text(_isEdit ? 'Editar ${widget.config.title}' : 'Nuevo/a ${widget.config.title}'),
       content: SizedBox(
-        width: 420,
+        width: dialogContentWidth(context, 420),
         child: _loadingOptions
             ? const SizedBox(height: 120, child: Center(child: CircularProgressIndicator()))
             : Form(

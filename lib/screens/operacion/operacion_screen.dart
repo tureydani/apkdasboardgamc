@@ -12,7 +12,7 @@ class OperacionScreen extends StatelessWidget {
     final items = [
       _MenuItem(
         'Emergencias',
-        'Todas las emergencias activas',
+        'Todas, agrupadas por estado',
         Icons.emergency,
         AppColors.urgentRed,
         () => const EmergenciesListScreen(title: 'Emergencias', allowCreate: true),
@@ -60,23 +60,24 @@ class OperacionScreen extends StatelessWidget {
     ];
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Operación')),
-      body: ListView.separated(
-        padding: const EdgeInsets.all(12),
-        itemCount: items.length,
-        separatorBuilder: (_, __) => const SizedBox(height: 8),
-        itemBuilder: (context, i) {
-          final item = items[i];
-          return Card(
-            child: ListTile(
-              leading: CircleAvatar(backgroundColor: item.color.withValues(alpha: 0.15), child: Icon(item.icon, color: item.color)),
-              title: Text(item.title, style: const TextStyle(fontWeight: FontWeight.w600)),
-              subtitle: Text(item.subtitle),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => item.builder())),
-            ),
-          );
-        },
+      body: SafeArea(
+        child: ListView.separated(
+          padding: const EdgeInsets.all(12),
+          itemCount: items.length,
+          separatorBuilder: (_, __) => const SizedBox(height: 8),
+          itemBuilder: (context, i) {
+            final item = items[i];
+            return Card(
+              child: ListTile(
+                leading: CircleAvatar(backgroundColor: item.color.withValues(alpha: 0.15), child: Icon(item.icon, color: item.color)),
+                title: Text(item.title, style: const TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: Text(item.subtitle),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => item.builder())),
+              ),
+            );
+          },
+        ),
       ),
     );
   }

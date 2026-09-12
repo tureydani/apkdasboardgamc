@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../app/theme/index.dart';
 import '../../config/crud_configs.dart';
 import '../../core/api_client.dart';
+import '../../core/utils/responsive.dart';
 import '../../services/emergency_service.dart';
 import 'emergencies_list_screen.dart';
 
@@ -153,13 +154,17 @@ class _InfoTab extends StatelessWidget {
     );
   }
 
+  // Columnas proporcionales (Expanded con flex) en vez de un ancho fijo en
+  // píxeles para la etiqueta: en pantallas angostas o con letra grande de
+  // accesibilidad, un SizedBox fijo le quitaba espacio desproporcionado al
+  // valor en vez de repartirse junto con él.
   Widget _kv(String k, dynamic v) => Padding(
         padding: const EdgeInsets.symmetric(vertical: 4),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            SizedBox(width: 130, child: Text(k, style: const TextStyle(color: AppColors.textTertiary))),
-            Expanded(child: Text(v?.toString() ?? '-')),
+            Expanded(flex: 2, child: Text(k, style: const TextStyle(color: AppColors.textTertiary))),
+            Expanded(flex: 3, child: Text(v?.toString() ?? '-')),
           ],
         ),
       );
@@ -320,7 +325,7 @@ class _AssignmentsTabState extends State<_AssignmentsTab> {
         builder: (context, setDialogState) => AlertDialog(
           title: const Text('Nueva asignación'),
           content: SizedBox(
-            width: 380,
+            width: dialogContentWidth(context, 380),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -431,7 +436,7 @@ class _RequirementsTabState extends State<_RequirementsTab> {
       builder: (dialogContext) => AlertDialog(
         title: const Text('Nuevo requerimiento'),
         content: SizedBox(
-          width: 340,
+          width: dialogContentWidth(dialogContext, 340),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [

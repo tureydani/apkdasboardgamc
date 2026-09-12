@@ -1,15 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:provider/provider.dart';
 
 import '../../app/theme/index.dart';
+import '../../core/animations/motion.dart';
 import '../../core/api_client.dart';
 import '../../core/dispatch_status.dart';
+import '../../core/services/gps_preference_service.dart';
 import '../../core/services/location_service.dart';
 import '../../core/tracking_config.dart';
+import '../../providers/route_view_provider.dart';
 import '../../services/dispatch_service.dart';
 import '../../services/emergency_service.dart';
 import '../../services/unit_tracking_service.dart';
-import 'dispatch_tracking_screen.dart';
 
 const _statusColors = {
   'SOLICITADA': AppColors.moderateOrange,
@@ -93,6 +96,12 @@ class _DispatchListScreenState extends State<DispatchListScreen> {
   Future<void> _depart(int id) => _act(() async {
         await _service.depart(id);
         await UnitTrackingService.instance.start(id);
+        final sharingEnabled = await GpsPreferenceService.isSharingEnabled();
+        if (!sharingEnabled && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Tenés el GPS desactivado (Más > GPS): la central no verá tu ubicación en vivo.'),
+          ));
+        }
       });
 
   Future<void> _cancel(int id) => _act(() async {
@@ -175,11 +184,13 @@ class _DispatchListScreenState extends State<DispatchListScreen> {
     final id = item['PK_assignment'] as int;
     switch (action) {
       case DispatchAction.accept:
+        // Late suavemente para marcar cuál es el botón que el usuario debe
+        // tocar — misma señal que la franja roja y el ícono de Operación.
         return FilledButton.icon(
           onPressed: _busy ? null : () => _act(() => _service.accept(id)),
           icon: const Icon(Icons.check, size: 18),
           label: const Text('Aceptar'),
-        );
+        ).pulseGlow(minScale: 1.0, maxScale: 1.05, minOpacity: 0.75, maxOpacity: 1.0, duration: const Duration(milliseconds: 900));
       case DispatchAction.reject:
         return OutlinedButton.icon(
           onPressed: _busy ? null : () => _cancel(id),
@@ -208,9 +219,12 @@ class _DispatchListScreenState extends State<DispatchListScreen> {
         );
       case DispatchAction.viewRoute:
         return OutlinedButton.icon(
-          onPressed: () => Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => DispatchTrackingScreen(assignmentId: id)),
-          ),
+          onPressed: () {
+            context.read<RouteViewProvider>().show(id);
+            // Esta pantalla siempre llega empujada sobre MainShell — hay que
+            // volver a la raíz para que se vea el cambio a la pestaña Mapa.
+            Navigator.of(context).popUntil((route) => route.isFirst);
+          },
           icon: const Icon(Icons.map_outlined, size: 18),
           label: const Text('Ver ruta'),
         );
