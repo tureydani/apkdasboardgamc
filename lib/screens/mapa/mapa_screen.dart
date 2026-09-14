@@ -336,6 +336,96 @@ mixin _LocateMeMixin<T extends StatefulWidget> on State<T> {
   }
 }
 
+/// Mapa enfocado en una sola emergencia, empujado como pantalla aparte
+/// (con su propio botón de "atrás" automático) desde Operación >
+/// Emergencias/Incidentes — a diferencia de la pestaña "Activas" (con sus
+/// filtros y clúster), acá no hace falta nada de eso: solo ubicar el pin de
+/// un vistazo y volver a la lista de donde salió, sin perder su scroll ni
+/// sus filtros.
+class EmergencyLocationMapScreen extends StatefulWidget {
+  final int emergencyId;
+  final String emergencyCode;
+
+  const EmergencyLocationMapScreen({super.key, required this.emergencyId, required this.emergencyCode});
+
+  @override
+  State<EmergencyLocationMapScreen> createState() => _EmergencyLocationMapScreenState();
+}
+
+class _EmergencyLocationMapScreenState extends State<EmergencyLocationMapScreen> {
+  final _service = EmergencyService();
+  Map<String, dynamic>? _item;
+  bool _loading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final items = await _service.map();
+      Map<String, dynamic>? match;
+      for (final e in items) {
+        if (e['PK_emergency'] == widget.emergencyId && e['latitude'] != null && e['longitude'] != null) {
+          match = e;
+          break;
+        }
+      }
+      if (!mounted) return;
+      setState(() => _item = match);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _error = e.toString());
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text(widget.emergencyCode)),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : _error != null
+              ? Center(child: Text(_error!))
+              : _item == null
+                  ? const Center(child: Text('Esta emergencia no tiene una ubicación activa en el mapa.'))
+                  : _buildMap(_item!),
+    );
+  }
+
+  Widget _buildMap(Map<String, dynamic> e) {
+    final point = LatLng(e['latitude'], e['longitude']);
+    final color = priorityColors[e['priority']] ?? AppColors.textTertiary;
+    return FlutterMap(
+      options: MapOptions(initialCenter: point, initialZoom: 16, minZoom: _minZoom, maxZoom: _maxZoom),
+      children: [
+        TileLayer(
+          urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+          userAgentPackageName: 'bo.gob.cochabamba.gamc.sosapk',
+          maxZoom: 19,
+        ),
+        MarkerLayer(markers: [
+          Marker(
+            point: point,
+            width: _DotMarker.outerSize,
+            height: _DotMarker.outerSize,
+            child: _DotMarker(
+              color: color,
+              icon: _mapStatusIcons[e['status']] ?? Icons.emergency,
+              pulse: e['priority'] == 'CRITICA',
+            ),
+          ),
+        ]),
+      ],
+    );
+  }
+}
+
 class _EmergenciesMapTab extends StatefulWidget {
   const _EmergenciesMapTab();
   @override
@@ -535,6 +625,11 @@ class _EmergenciesMapTabState extends State<_EmergenciesMapTab> with _LocateMeMi
                 alignment: Alignment.center,
                 markerChildBehavior: true,
                 spiderfyCluster: false,
+                // El paquete dibuja por defecto un polígono verde sólido
+                // sobre el área del clúster al tocarlo (antes de hacer zoom);
+                // lo desactivamos porque no tiene relación con nuestro
+                // diseño y se ve como un error visual.
+                showPolygon: false,
                 markers: visibleItems
                     .map((e) => Marker(
                           point: LatLng(e['latitude'], e['longitude']),
