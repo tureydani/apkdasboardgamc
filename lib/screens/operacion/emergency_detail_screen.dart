@@ -156,25 +156,29 @@ class _EmergencyDetailScreenState extends State<EmergencyDetailScreen> with Sing
     final chosen = await showModalBottomSheet<String>(
       context: context,
       showDragHandle: true,
-      builder: (_) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.only(bottom: 8),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Padding(
-                padding: EdgeInsets.fromLTRB(20, 0, 20, 8),
-                child: Align(alignment: Alignment.centerLeft, child: Text('Cambiar estado', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16))),
-              ),
-              for (final s in _statusFlow)
-                RadioListTile<String>(
-                  title: Text(emergencyStatusLabels[s] ?? s),
-                  secondary: CircleAvatar(radius: 6, backgroundColor: emergencyStatusColors[s] ?? AppColors.textTertiary),
-                  value: s,
-                  groupValue: current,
-                  onChanged: (v) => Navigator.pop(context, v),
+      isScrollControlled: true,
+      builder: (ctx) => SafeArea(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxHeight: MediaQuery.of(ctx).size.height * 0.8),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(20, 0, 20, 8),
+                  child: Align(alignment: Alignment.centerLeft, child: Text('Cambiar estado', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16))),
                 ),
-            ],
+                for (final s in _statusFlow)
+                  RadioListTile<String>(
+                    title: Text(emergencyStatusLabels[s] ?? s),
+                    secondary: CircleAvatar(radius: 6, backgroundColor: emergencyStatusColors[s] ?? AppColors.textTertiary),
+                    value: s,
+                    groupValue: current,
+                    onChanged: (v) => Navigator.pop(context, v),
+                  ),
+              ],
+            ),
           ),
         ),
       ),
