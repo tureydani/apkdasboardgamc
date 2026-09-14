@@ -25,7 +25,7 @@ class SosApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => RouteViewProvider()),
       ],
       child: MaterialApp(
-        title: 'SOS-24 GAMC',
+        title: 'SIRAD',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.lightTheme.copyWith(
           navigationBarTheme: AppTheme.lightTheme.navigationBarTheme.copyWith(

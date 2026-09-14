@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../../app/theme/index.dart';
 import '../../services/emergency_service.dart';
+import '../mapa/mapa_screen.dart' show EmergencyLocationMapScreen;
 import 'emergency_detail_screen.dart';
 import 'emergency_form_screen.dart';
 
@@ -259,8 +260,7 @@ class _EmergenciesListScreenState extends State<EmergenciesListScreen> {
   }
 
   Widget _buildStatusFilterRow() {
-    return SizedBox(
-      height: 40,
+    return IntrinsicHeight(
       child: ListView(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -284,8 +284,7 @@ class _EmergenciesListScreenState extends State<EmergenciesListScreen> {
   }
 
   Widget _buildPriorityFilterRow() {
-    return SizedBox(
-      height: 40,
+    return IntrinsicHeight(
       child: ListView(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.fromLTRB(12, 0, 12, 4),
@@ -343,10 +342,27 @@ class _EmergenciesListScreenState extends State<EmergenciesListScreen> {
         overflow: TextOverflow.ellipsis,
       ),
       isThreeLine: true,
-      trailing: Chip(
-        label: Text(e['priority'] ?? '', style: const TextStyle(fontSize: 11, color: Colors.white)),
-        backgroundColor: color,
-        visualDensity: VisualDensity.compact,
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Chip(
+            label: Text(e['priority'] ?? '', style: const TextStyle(fontSize: 11, color: Colors.white)),
+            backgroundColor: color,
+            visualDensity: VisualDensity.compact,
+          ),
+          // Botón compacto que empuja un mapa enfocado (reutilizando los
+          // mismos pines/colores de la pestaña Mapa) sobre esta misma
+          // pantalla — no salta a la pestaña Mapa del shell para que "atrás"
+          // regrese directo a esta lista, sin perder scroll ni filtros.
+          IconButton(
+            icon: const Icon(Icons.map_outlined, size: 20),
+            tooltip: 'Ver en el mapa',
+            visualDensity: VisualDensity.compact,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+            onPressed: () => _viewOnMap(e),
+          ),
+        ],
       ),
       onTap: () async {
         await Navigator.of(context).push(
@@ -354,6 +370,17 @@ class _EmergenciesListScreenState extends State<EmergenciesListScreen> {
         );
         _load();
       },
+    );
+  }
+
+  void _viewOnMap(Map<String, dynamic> e) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => EmergencyLocationMapScreen(
+          emergencyId: e['PK_emergency'],
+          emergencyCode: e['emergencyCode'] ?? '',
+        ),
+      ),
     );
   }
 }
@@ -427,8 +454,7 @@ class _StatusPagerState extends State<_StatusPager> {
   }
 
   Widget _buildTabs(List<MapEntry<String, List<Map<String, dynamic>>>> groups) {
-    return SizedBox(
-      height: 52,
+    return IntrinsicHeight(
       child: Row(
         children: [
           for (var i = 0; i < groups.length; i++) Expanded(child: _buildTab(groups[i].key, groups[i].value.length, i)),

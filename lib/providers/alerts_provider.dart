@@ -1,9 +1,9 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart';
 
 import '../services/dispatch_service.dart';
+import '../services/local_alert_service.dart';
 import '../services/notification_service.dart';
 
 /// Sondea periódicamente notificaciones sin leer y despachos pendientes
@@ -15,6 +15,7 @@ import '../services/notification_service.dart';
 class AlertsProvider extends ChangeNotifier {
   final _notificationService = NotificationService();
   final _dispatchService = DispatchService();
+  final _localAlertService = LocalAlertService.instance;
 
   Timer? _timer;
   bool _trackAssignments = false;
@@ -25,6 +26,9 @@ class AlertsProvider extends ChangeNotifier {
 
   void start({required bool trackAssignments, Duration interval = const Duration(seconds: 20)}) {
     _trackAssignments = trackAssignments;
+    if (trackAssignments) {
+      unawaited(_localAlertService.requestPermission());
+    }
     _timer?.cancel();
     unawaited(_tick());
     _timer = Timer.periodic(interval, (_) => _tick());
@@ -57,15 +61,14 @@ class AlertsProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Secuencia corta de sonido + vibración fuerte, repetida unas veces,
-  /// usando solo APIs nativas de Flutter (sin assets de audio ni permisos
-  /// adicionales).
+  /// Notificación local con sonido + patrón de vibración propio (ver
+  /// [LocalAlertService]): más confiable entre equipos que combinar
+  /// SystemSound + HapticFeedback, que usábamos antes acá.
   Future<void> _alertNewAssignment() async {
-    for (var i = 0; i < 3; i++) {
-      unawaited(SystemSound.play(SystemSoundType.alert));
-      unawaited(HapticFeedback.heavyImpact());
-      await Future.delayed(const Duration(milliseconds: 350));
-    }
+    await _localAlertService.notifyNewAssignment(
+      title: pendingAssignments == 1 ? 'Nueva asignación pendiente' : '$pendingAssignments asignaciones pendientes',
+      body: 'Se te asignó un despacho. Tocá para revisarlo.',
+    );
   }
 
   @override

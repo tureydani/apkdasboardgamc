@@ -64,6 +64,7 @@ dependencies:
 
   # Tipografía (mismo sistema visual que arconde-gamc)
   google_fonts: ^6.2.1
+  flutter_local_notifications: ^22.3.1
 
 dev_dependencies:
   flutter_test:
@@ -75,6 +76,7 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.4
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -117,3 +119,17 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+# Ícono de la app (ver assets/icon/): logo institucional en rojo. `image_path`
+# es la versión con fondo blanco opaco (requerida por iOS, que no admite
+# transparencia); `adaptive_icon_foreground` es la versión sin fondo para el
+# ícono adaptable de Android 8+, con el logo encogido para no recortarse
+# contra las distintas máscaras (círculo, squircle, etc.) que aplican los
+# fabricantes.
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/icon/icon.png"
+  remove_alpha_ios: true
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: "assets/icon/icon_foreground.png"
