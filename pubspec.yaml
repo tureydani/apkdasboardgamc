@@ -66,6 +66,12 @@ dependencies:
   google_fonts: ^6.2.1
   flutter_local_notifications: ^22.3.1
 
+  # Sonido de alarma en loop + vibración continua para "nueva asignación"
+  # (suena hasta que el operador toca la pantalla), y vibración con patrón
+  # para notificaciones generales.
+  audioplayers: ^6.1.0
+  vibration: ^3.1.3
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -102,6 +108,7 @@ flutter:
 
   assets:
     - assets/icon/icon_foreground.png
+    - assets/sounds/siren_alarm.wav
 
   # To add custom fonts to your application, add a fonts section here,
   # in this "flutter" section. Each entry in this list should have a

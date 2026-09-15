@@ -11,6 +11,7 @@ import '../home/home_screen.dart';
 import '../mapa/mapa_screen.dart';
 import '../mas/mas_screen.dart';
 import '../operacion/dispatch_list_screen.dart';
+import '../operacion/incoming_assignment_screen.dart';
 import '../operacion/operacion_screen.dart';
 
 /// Shell principal con navegación inferior, replicando el árbol de secciones
@@ -29,6 +30,12 @@ class _MainShellState extends State<MainShell> {
   final _alerts = AlertsProvider();
   late final RouteViewProvider _routeView;
 
+  // Evita apilar una segunda `IncomingAssignmentScreen` encima de la
+  // primera si el polling detecta otra asignación nueva (u otra ronda del
+  // mismo timer) antes de que el operador haya tocado la pantalla de
+  // alarma que ya está abierta.
+  bool _showingAssignmentAlarm = false;
+
   final _pages = const [
     HomeScreen(),
     OperacionScreen(),
@@ -41,12 +48,26 @@ class _MainShellState extends State<MainShell> {
   void initState() {
     super.initState();
     final user = context.read<SessionProvider>().user;
-    _alerts.start(trackAssignments: user?.role == 'INSTITUTION');
+    _alerts.start(
+      trackAssignments: user?.role == 'INSTITUTION',
+      onNewAssignment: _showAssignmentAlarm,
+    );
     // Cualquier pantalla puede pedir "ver ruta" (RouteViewProvider.show);
     // acá se reacciona saltando a la pestaña Mapa, que a su vez salta a su
     // propia subpestaña "Mi ruta" escuchando el mismo provider.
     _routeView = context.read<RouteViewProvider>();
     _routeView.addListener(_onRouteRequested);
+  }
+
+  void _showAssignmentAlarm(int count) {
+    if (_showingAssignmentAlarm || !mounted) return;
+    _showingAssignmentAlarm = true;
+    Navigator.of(context)
+        .push(MaterialPageRoute(builder: (_) => IncomingAssignmentScreen(count: count), fullscreenDialog: true))
+        .then((_) {
+      _showingAssignmentAlarm = false;
+      _alerts.refreshNow();
+    });
   }
 
   @override

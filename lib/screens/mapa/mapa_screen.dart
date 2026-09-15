@@ -560,11 +560,16 @@ class _EmergenciesMapTabState extends State<_EmergenciesMapTab> with _LocateMeMi
           title: Text(e['emergencyCode'] ?? ''),
           subtitle: Text('${_mapPriorityLabels[e['priority']] ?? e['priority'] ?? ''} · ${_mapStatusLabels[e['status']] ?? e['status'] ?? ''}'),
           trailing: const Icon(Icons.chevron_right),
-          onTap: () {
+          onTap: () async {
             Navigator.of(context).pop();
-            Navigator.of(context).push(
+            await Navigator.of(context).push(
               MaterialPageRoute(builder: (_) => EmergencyDetailScreen(id: e['PK_emergency'])),
             );
+            // El endpoint del mapa solo trae emergencias activas: si acá se
+            // cambió el estado a uno cerrado (atendida/resuelta/falsa
+            // alarma/cancelada), el pin debe desaparecer al volver, no
+            // quedarse "pegado" hasta el próximo refresco manual.
+            if (mounted) _load();
           },
         ),
       ),
@@ -624,7 +629,15 @@ class _EmergenciesMapTabState extends State<_EmergenciesMapTab> with _LocateMeMi
                 size: const Size(_DotMarker.outerSize, _DotMarker.outerSize),
                 alignment: Alignment.center,
                 markerChildBehavior: true,
-                spiderfyCluster: false,
+                // Con esto en `false`, tocar un clúster solo intentaba hacer
+                // zoom a sus límites — pero si dos o más reportes comparten
+                // exactamente el mismo punto (o quedan a pocos metros), ese
+                // zoom nunca los llega a separar y el clúster queda
+                // "atascado": ninguno de esos reportes se puede tocar
+                // individualmente. Con `true`, cuando el zoom ya no puede
+                // dividir más el clúster, el paquete lo abre en abanico
+                // ("spiderfy") para que cada pin quede seleccionable.
+                spiderfyCluster: true,
                 // El paquete dibuja por defecto un polígono verde sólido
                 // sobre el área del clúster al tocarlo (antes de hacer zoom);
                 // lo desactivamos porque no tiene relación con nuestro
@@ -999,8 +1012,8 @@ class _MyRouteTab extends StatefulWidget {
 }
 
 class _MyRouteTabState extends State<_MyRouteTab> {
-  static const _traveledColor = Color(0xFF1E88FF);
-  static const _projectedColor = Color(0xFFFF6D00);
+  static const _traveledColor = AppColors.primary;
+  static const _projectedColor = AppColors.moderateOrange;
   static const _ticksPerRouteRecalc = TrackingConfig.routeRecalcSeconds ~/ TrackingConfig.pollIntervalSeconds;
 
   final _dispatchService = DispatchService();

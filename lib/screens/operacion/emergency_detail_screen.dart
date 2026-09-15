@@ -283,7 +283,7 @@ class _EmergencyDetailScreenState extends State<EmergencyDetailScreen> with Sing
                       child: TabBarView(
                         controller: _tabController,
                         children: [
-                          _InfoTab(data: e, location: loc, onViewMap: _showLocation),
+                          _InfoTab(data: e, location: loc, onViewMap: _showLocation, onChangeStatus: _changeStatus),
                           _RoomTab(id: widget.id, service: _service),
                           _AssignmentsTab(
                             id: widget.id,
@@ -359,16 +359,6 @@ class _EmergencyDetailScreenState extends State<EmergencyDetailScreen> with Sing
           ),
           IconButton(icon: const Icon(Icons.refresh), tooltip: 'Actualizar', onPressed: _load),
           IconButton(icon: const Icon(Icons.place_outlined), tooltip: 'Ver ubicación', onPressed: _showLocation),
-          PopupMenuButton<String>(
-            tooltip: 'Más opciones',
-            icon: const Icon(Icons.more_vert),
-            onSelected: (v) {
-              if (v == 'status') _changeStatus();
-            },
-            itemBuilder: (_) => const [
-              PopupMenuItem(value: 'status', child: ListTile(leading: Icon(Icons.sync_alt), title: Text('Cambiar estado'), contentPadding: EdgeInsets.zero)),
-            ],
-          ),
         ],
       ),
     );
@@ -650,7 +640,8 @@ class _InfoTab extends StatelessWidget {
   final Map<String, dynamic> data;
   final ({double lat, double lng, String? address})? location;
   final VoidCallback onViewMap;
-  const _InfoTab({required this.data, required this.location, required this.onViewMap});
+  final VoidCallback onChangeStatus;
+  const _InfoTab({required this.data, required this.location, required this.onViewMap, required this.onChangeStatus});
 
   @override
   Widget build(BuildContext context) {
@@ -663,11 +654,32 @@ class _InfoTab extends StatelessWidget {
       padding: const EdgeInsets.only(top: 12, bottom: 24),
       children: [
         _Card(
-          child: Column(
+          child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const _SectionLabel('Estado'),
-              _StatusPill(color: statusColor, label: (emergencyStatusLabels[status] ?? status ?? '—').toUpperCase()),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const _SectionLabel('Estado'),
+                    _StatusPill(color: statusColor, label: (emergencyStatusLabels[status] ?? status ?? '—').toUpperCase()),
+                  ],
+                ),
+              ),
+              // Acceso directo para revisar/avanzar el caso sin tener que
+              // buscarlo en el menú de "⋮" — es la acción que más se repite
+              // al atender un reporte, así que va al frente, no escondida.
+              OutlinedButton.icon(
+                onPressed: onChangeStatus,
+                icon: const Icon(Icons.sync_alt, size: 17),
+                label: const Text('Cambiar'),
+                style: OutlinedButton.styleFrom(
+                  visualDensity: VisualDensity.compact,
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  foregroundColor: AppColors.primary,
+                  side: const BorderSide(color: AppColors.primary),
+                ),
+              ),
             ],
           ),
         ),
@@ -1038,17 +1050,29 @@ class _AssignmentsTabState extends State<_AssignmentsTab> {
                       .map((i) => DropdownMenuItem(value: i['PK_institution'] as int, child: Text(i['name']?.toString() ?? '', overflow: TextOverflow.ellipsis)))
                       .toList(),
                   onChanged: (v) async {
-                    institutionId = v;
                     final u = await CrudConfigs.units.service.list(query: {'FK_institution': v, 'pageSize': 200});
-                    setDialogState(() => units = u.items);
+                    // `unitId` se resetea junto con la institución: la unidad
+                    // elegida antes casi nunca pertenece a la nueva lista, y
+                    // sin esto el dropdown de abajo queda con un valor
+                    // seleccionado que ya no está entre sus `items` — eso
+                    // dispara el assert de Flutter ("exactly one item with
+                    // value") y revienta el diálogo. La `key` fuerza además
+                    // que ese dropdown arranque de cero (sin selección
+                    // visual) cada vez que cambia la institución.
+                    setDialogState(() {
+                      institutionId = v;
+                      unitId = null;
+                      units = u.items;
+                    });
                   },
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<int>(
+                  key: ValueKey(institutionId),
                   isExpanded: true,
                   decoration: const InputDecoration(labelText: 'Unidad (opcional)', border: OutlineInputBorder()),
                   items: units.map((u) => DropdownMenuItem(value: u['PK_unit'] as int, child: Text('${u['unitCode']} · ${u['unitName']}', overflow: TextOverflow.ellipsis))).toList(),
-                  onChanged: (v) => unitId = v,
+                  onChanged: (v) => setDialogState(() => unitId = v),
                 ),
               ],
             ),

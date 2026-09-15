@@ -11,11 +11,6 @@ import '../mas/seguimiento/gps_screen.dart';
 import '../operacion/dispatch_list_screen.dart';
 import '../operacion/emergencies_list_screen.dart';
 
-/// Mismos estados "activos" que usa el backend en /api/dashboard/stats para
-/// calcular activeEmergencies/criticalActive, así el filtro del recuadro
-/// coincide exactamente con el número mostrado.
-const _activeStatuses = ['REPORTADA', 'EN_ANALISIS', 'CLASIFICADA', 'ASIGNADA', 'EN_ATENCION'];
-
 // Paleta institucional de las tarjetas de estadísticas: fondo pastel bien
 // definido + un único color de acento (ícono y número) por tarjeta, para
 // que cada estado se reconozca de un vistazo sin saturar la pantalla de
@@ -210,7 +205,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 accent: _kpiActiveAccent,
                                 onTap: () => _open(const EmergenciesListScreen(
                                   title: 'Emergencias activas',
-                                  statusFilter: _activeStatuses,
+                                  statusFilter: activeEmergencyStatuses,
                                   allowCreate: true,
                                 )),
                               ),
@@ -222,7 +217,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 accent: _kpiCriticalAccent,
                                 onTap: () => _open(const EmergenciesListScreen(
                                   title: 'Emergencias críticas',
-                                  statusFilter: _activeStatuses,
+                                  statusFilter: activeEmergencyStatuses,
                                   priorityFilter: 'CRITICA',
                                 )),
                               ),

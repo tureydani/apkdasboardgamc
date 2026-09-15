@@ -55,8 +55,27 @@ const emergencyStatusColors = {
   'EN_ATENCION': AppColors.urgentRed,
   'RESUELTA': AppColors.resolvedGreen,
   'FALSA_ALARMA': AppColors.textTertiary,
-  'CANCELADA': AppColors.textDisabled,
+  // `textDisabled` (gris casi blanco) es prácticamente invisible como color
+  // de texto/ícono en una píldora o chip — se usa `accentSoft` (slate-500)
+  // en su lugar: se sigue leyendo como "cerrada/neutral", pero con
+  // contraste suficiente para ser legible y distinguirse de "Falsa alarma".
+  'CANCELADA': AppColors.accentSoft,
 };
+
+/// Estados que ya se consideran cerrados/atendidos — una vez que una
+/// emergencia llega a uno de estos, deja de aparecer en las vistas
+/// "activas" (Emergencias, KPIs del dashboard) y pasa a verse solo en
+/// Historial.
+const closedEmergencyStatuses = ['RESUELTA', 'FALSA_ALARMA', 'CANCELADA'];
+
+/// Complemento de `closedEmergencyStatuses`: lo que sigue en curso.
+const activeEmergencyStatuses = [
+  'REPORTADA',
+  'EN_ANALISIS',
+  'CLASIFICADA',
+  'ASIGNADA',
+  'EN_ATENCION',
+];
 
 /// Lista de emergencias (`tbemergencies`, isMainEmergency=true), reutilizada
 /// para Operación > Emergencias, Incidentes (recién reportadas), Asignación
@@ -184,10 +203,44 @@ class _EmergenciesListScreenState extends State<EmergenciesListScreen> {
         .toList();
   }
 
+  /// Esta pantalla ya muestra solo cerradas (p. ej. "Historial" o la
+  /// tarjeta "Resueltas" del inicio) — no tiene sentido ofrecer un botón
+  /// para ir al historial desde el historial mismo.
+  bool get _isClosedOnlyView => _statusScope.isNotEmpty && _statusScope.every(closedEmergencyStatuses.contains);
+
+  void _openHistory() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => const EmergenciesListScreen(title: 'Historial de emergencias', statusFilter: closedEmergencyStatuses),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(widget.title)),
+      appBar: AppBar(
+        title: Text(widget.title),
+        actions: [
+          if (!_isClosedOnlyView)
+            // Botón con color e ícono propios (no el gris genérico de un
+            // IconButton normal) para que "ir a lo ya cerrado" se distinga
+            // de un simple acceso más — mismo verde que usa `RESUELTA` en
+            // toda la app, así se asocia de un vistazo con "caso cerrado".
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: IconButton.filledTonal(
+                icon: const Icon(Icons.history_rounded),
+                tooltip: 'Ver historial (resueltas, falsas alarmas, canceladas)',
+                style: IconButton.styleFrom(
+                  backgroundColor: AppColors.resolvedGreenContainer,
+                  foregroundColor: AppColors.resolvedGreenDark,
+                ),
+                onPressed: _openHistory,
+              ),
+            ),
+        ],
+      ),
       body: Column(
         children: [
           Padding(

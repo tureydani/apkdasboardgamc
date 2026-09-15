@@ -1,6 +1,7 @@
 import 'package:cookie_jar/cookie_jar.dart';
 import 'package:dio/dio.dart';
 import 'package:dio_cookie_manager/dio_cookie_manager.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:path_provider/path_provider.dart';
 
 import 'app_config.dart';
@@ -21,6 +22,11 @@ class ApiClient {
       followRedirects: false,
       validateStatus: (status) => status != null && status < 500,
       headers: {'Accept': 'application/json'},
+      // En Flutter Web las requests las hace el propio navegador (fetch/XHR),
+      // que ya administra el cookie jar del sistema — necesita este flag
+      // para que además mande/reciba cookies en llamadas a otro origen
+      // (nuestro backend corre en otro puerto/dominio que la app web).
+      extra: kIsWeb ? {'withCredentials': true} : null,
     ),
   );
 
@@ -29,12 +35,18 @@ class ApiClient {
 
   Future<void> ensureReady() async {
     if (_ready) return;
-    final dir = await getApplicationDocumentsDirectory();
-    _cookieJar = PersistCookieJar(
-      ignoreExpires: true,
-      storage: FileStorage('${dir.path}/.cookies/'),
-    );
-    dio.interceptors.add(CookieManager(_cookieJar!));
+    // `path_provider` (almacenamiento de cookies en archivo) no existe en
+    // Flutter Web, y tampoco hace falta: el navegador ya persiste y adjunta
+    // las cookies HttpOnly de NextAuth por su cuenta, sin que Dio/cookie_jar
+    // pueda ni necesite tocarlas manualmente.
+    if (!kIsWeb) {
+      final dir = await getApplicationDocumentsDirectory();
+      _cookieJar = PersistCookieJar(
+        ignoreExpires: true,
+        storage: FileStorage('${dir.path}/.cookies/'),
+      );
+      dio.interceptors.add(CookieManager(_cookieJar!));
+    }
     _ready = true;
   }
 

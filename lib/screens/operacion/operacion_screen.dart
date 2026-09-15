@@ -12,10 +12,14 @@ class OperacionScreen extends StatelessWidget {
     final items = [
       _MenuItem(
         'Emergencias',
-        'Todas, agrupadas por estado',
+        'Activas, agrupadas por estado',
         Icons.emergency,
         AppColors.urgentRed,
-        () => const EmergenciesListScreen(title: 'Emergencias', allowCreate: true),
+        () => const EmergenciesListScreen(
+          title: 'Emergencias',
+          statusFilter: activeEmergencyStatuses,
+          allowCreate: true,
+        ),
       ),
       _MenuItem(
         'Incidentes',
@@ -50,11 +54,11 @@ class OperacionScreen extends StatelessWidget {
       _MenuItem(
         'Historial',
         'Resueltas, falsas alarmas y canceladas',
-        Icons.history,
-        AppColors.textTertiary,
+        Icons.history_rounded,
+        AppColors.resolvedGreenDark,
         () => const EmergenciesListScreen(
           title: 'Historial de emergencias',
-          statusFilter: ['RESUELTA', 'FALSA_ALARMA', 'CANCELADA'],
+          statusFilter: closedEmergencyStatuses,
         ),
       ),
     ];

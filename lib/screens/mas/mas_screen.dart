@@ -5,7 +5,6 @@ import 'package:provider/provider.dart';
 import '../../app/theme/index.dart';
 import '../../config/crud_configs.dart';
 import '../../providers/session_provider.dart';
-import '../../providers/theme_provider.dart';
 import '../../widgets/app_scaffold.dart';
 import '../../widgets/crud/generic_crud_screen.dart';
 import 'administracion/users_screen.dart';
@@ -21,7 +20,6 @@ class MasScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final user = context.watch<SessionProvider>().user;
-    final themeProvider = context.watch<ThemeProvider>();
 
     return AppScaffold(
       body: SafeArea(
@@ -38,16 +36,6 @@ class MasScreen extends StatelessWidget {
                 subtitle: Text(user?.privilegeName ?? 'Ver información de la cuenta'),
                 trailing: const Icon(Icons.chevron_right, size: 18),
                 onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const PerfilScreen())),
-              ),
-            ),
-            Card(
-              margin: const EdgeInsets.fromLTRB(12, 4, 12, 4),
-              child: SwitchListTile(
-                secondary: const Icon(Icons.dark_mode_outlined),
-                title: const Text('Modo oscuro', style: TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: const Text('Fondo navy en vez de blanco'),
-                value: themeProvider.isDark,
-                onChanged: themeProvider.setDark,
               ),
             ),
             _Section(
