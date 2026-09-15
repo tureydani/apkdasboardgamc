@@ -441,4 +441,99 @@ class AppTheme {
       visualDensity: VisualDensity.adaptivePlatformDensity,
     );
   }
+
+  /// Variante oscura opcional (activable en Más → Apariencia): mismo navy
+  /// del logo, ahora como fondo en vez de acento puntual del header.
+  static ThemeData get darkTheme {
+    final base = lightTheme;
+    return base.copyWith(
+      brightness: Brightness.dark,
+      colorScheme: base.colorScheme.copyWith(
+        brightness: Brightness.dark,
+        onPrimaryContainer: AppColors.primaryContainer,
+        surface: AppColors.darkSurface,
+        onSurface: AppColors.darkTextPrimary,
+        surfaceContainerHighest: AppColors.darkSurfaceElevated,
+        onSurfaceVariant: AppColors.darkTextSecondary,
+        outline: AppColors.darkBorder,
+        outlineVariant: AppColors.darkBorder,
+        inverseSurface: AppColors.darkTextPrimary,
+        onInverseSurface: AppColors.darkSurface,
+      ),
+      scaffoldBackgroundColor: AppColors.darkBackground,
+      canvasColor: AppColors.darkBackground,
+      cardColor: AppColors.darkSurface,
+      dividerColor: AppColors.darkBorder,
+      hoverColor: AppColors.darkSurfaceElevated,
+      appBarTheme: base.appBarTheme.copyWith(
+        backgroundColor: AppColors.darkBackground,
+        foregroundColor: AppColors.darkTextPrimary,
+        titleTextStyle: AppTextStyles.titleLarge.copyWith(color: AppColors.darkTextPrimary),
+        iconTheme: const IconThemeData(color: AppColors.darkTextPrimary, size: AppSpacing.iconMd),
+        actionsIconTheme: const IconThemeData(color: AppColors.darkTextPrimary, size: AppSpacing.iconMd),
+        systemOverlayStyle: SystemUiOverlayStyle.light,
+      ),
+      navigationBarTheme: base.navigationBarTheme.copyWith(
+        backgroundColor: AppColors.darkBackground,
+        labelTextStyle: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return const TextStyle(fontSize: 12.5, color: AppColors.primaryLight, fontWeight: FontWeight.w600);
+          }
+          return const TextStyle(fontSize: 12.5, color: AppColors.darkTextTertiary, fontWeight: FontWeight.w400);
+        }),
+        iconTheme: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return const IconThemeData(color: AppColors.primaryLight, size: 27);
+          }
+          return const IconThemeData(color: AppColors.darkTextTertiary, size: 27);
+        }),
+        indicatorColor: AppColors.primary.withValues(alpha: 0.35),
+      ),
+      bottomNavigationBarTheme: base.bottomNavigationBarTheme.copyWith(
+        backgroundColor: AppColors.darkBackground,
+        selectedItemColor: AppColors.primaryLight,
+        unselectedItemColor: AppColors.darkTextTertiary,
+      ),
+      cardTheme: base.cardTheme.copyWith(
+        color: AppColors.darkSurface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppSpacing.borderRadiusLg),
+          side: const BorderSide(color: AppColors.darkBorder, width: 1),
+        ),
+      ),
+      dialogTheme: base.dialogTheme.copyWith(
+        backgroundColor: AppColors.darkSurface,
+        titleTextStyle: AppTextStyles.headlineSmall.copyWith(color: AppColors.darkTextPrimary),
+        contentTextStyle: AppTextStyles.bodyMedium.copyWith(color: AppColors.darkTextSecondary),
+      ),
+      bottomSheetTheme: base.bottomSheetTheme.copyWith(backgroundColor: AppColors.darkSurface),
+      chipTheme: base.chipTheme.copyWith(
+        backgroundColor: AppColors.darkSurfaceElevated,
+        labelStyle: AppTextStyles.labelMedium.copyWith(color: AppColors.darkTextPrimary),
+        side: const BorderSide(color: AppColors.darkBorder, width: 1),
+      ),
+      inputDecorationTheme: base.inputDecorationTheme.copyWith(
+        fillColor: AppColors.darkSurfaceElevated,
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppSpacing.borderRadiusMd),
+          borderSide: const BorderSide(color: AppColors.darkBorder, width: 1),
+        ),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppSpacing.borderRadiusMd),
+          borderSide: const BorderSide(color: AppColors.darkBorder, width: 1),
+        ),
+        labelStyle: AppTextStyles.bodyMedium.copyWith(color: AppColors.darkTextSecondary),
+        hintStyle: AppTextStyles.bodyMedium.copyWith(color: AppColors.darkTextTertiary),
+      ),
+      listTileTheme: base.listTileTheme.copyWith(
+        iconColor: AppColors.darkTextTertiary,
+        textColor: AppColors.darkTextPrimary,
+      ),
+      dividerTheme: base.dividerTheme.copyWith(color: AppColors.darkBorder),
+      snackBarTheme: base.snackBarTheme.copyWith(
+        backgroundColor: AppColors.darkSurfaceElevated,
+        contentTextStyle: AppTextStyles.bodyMedium.copyWith(color: AppColors.darkTextPrimary),
+      ),
+    );
+  }
 }

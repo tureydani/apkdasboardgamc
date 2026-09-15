@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'app/theme/index.dart';
 import 'providers/route_view_provider.dart';
 import 'providers/session_provider.dart';
+import 'providers/theme_provider.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/shell/main_shell.dart';
 
@@ -23,16 +24,25 @@ class SosApp extends StatelessWidget {
         // como las pantallas empujadas (p. ej. Despacho) puedan pedir "ver
         // ruta" con el mismo provider.
         ChangeNotifierProvider(create: (_) => RouteViewProvider()),
+        ChangeNotifierProvider(create: (_) => ThemeProvider()..restore()),
       ],
-      child: MaterialApp(
-        title: 'SIRAD',
-        debugShowCheckedModeBanner: false,
-        theme: AppTheme.lightTheme.copyWith(
-          navigationBarTheme: AppTheme.lightTheme.navigationBarTheme.copyWith(
-            labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-          ),
-        ),
-        home: const _SessionGate(),
+      child: Consumer<ThemeProvider>(
+        builder: (context, themeProvider, _) {
+          NavigationBarThemeData alwaysShowLabels(NavigationBarThemeData nav) =>
+              nav.copyWith(labelBehavior: NavigationDestinationLabelBehavior.alwaysShow);
+          return MaterialApp(
+            title: 'SIRAD',
+            debugShowCheckedModeBanner: false,
+            theme: AppTheme.lightTheme.copyWith(
+              navigationBarTheme: alwaysShowLabels(AppTheme.lightTheme.navigationBarTheme),
+            ),
+            darkTheme: AppTheme.darkTheme.copyWith(
+              navigationBarTheme: alwaysShowLabels(AppTheme.darkTheme.navigationBarTheme),
+            ),
+            themeMode: themeProvider.mode,
+            home: const _SessionGate(),
+          );
+        },
       ),
     );
   }
